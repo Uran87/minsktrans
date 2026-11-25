@@ -181,7 +181,7 @@ async function showRoute() {
       state.routeVehicles.length ? state.routeVehicles : state.vehicles,
     );
     applyRouteGeometry(transport, route, generation, requestId, preferredDirection);
-    mapView.updateVehicles(state.vehicles, transport);
+    updateVehicleLayer();
     mapView.fitToRoute(state.routeStops, state.routeVehicles);
     renderRouteVehicles();
 
@@ -249,6 +249,26 @@ function drawRoute(orderIds, geometry = state.routeGeometry) {
 function vehiclesForRoute(vehicles, route) {
   const target = String(route ?? '');
   return vehicles.filter((vehicle) => !vehicle.route || String(vehicle.route) === target);
+}
+
+const ROUTE_VEHICLES_MIN_ZOOM = 12;
+const ALL_VEHICLES_MIN_ZOOM = 14;
+
+function updateVehicleLayer() {
+  const zoom = mapView.getZoom();
+
+  if (zoom < ROUTE_VEHICLES_MIN_ZOOM) {
+    mapView.updateVehicles([], state.transport);
+    return;
+  }
+
+  if (zoom < ALL_VEHICLES_MIN_ZOOM) {
+    const vehicles = state.route ? vehiclesForRoute(state.vehicles, state.route) : [];
+    mapView.updateVehicles(vehicles, state.transport);
+    return;
+  }
+
+  mapView.updateVehicles(state.vehicles, state.transport);
 }
 
 function renderRouteVehicles() {
@@ -448,7 +468,7 @@ async function pollOnce() {
       ? attachNextStops(vehiclesForRoute(vehicles, state.route))
       : [];
 
-    mapView.updateVehicles(state.vehicles, transport);
+    updateVehicleLayer();
     renderRouteVehicles();
 
     state.lastPollAt = Date.now();
@@ -877,6 +897,7 @@ mapView.initMap('map', {
   onVehicleClick: (vehicleId) => selectVehicle(vehicleId, false),
   onStopClick: handleStopClick,
   onEmptyClick: closeStopPopup,
+  onZoomChange: updateVehicleLayer,
 });
 mapView.setBaseLayer(prefs.layer);
 

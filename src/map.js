@@ -35,6 +35,7 @@ let stopsSource = null;
 let clickHandler = null;
 let stopClickHandler = null;
 let emptyClickHandler = null;
+let zoomChangeHandler = null;
 let stopPopupOverlay = null;
 
 let currentColor = TRANSPORT_COLORS.bus;
@@ -389,10 +390,11 @@ function updateStopDisplay() {
 /* Инициализация                                                       */
 /* ------------------------------------------------------------------ */
 
-export function initMap(target, { onVehicleClick, onStopClick, onEmptyClick } = {}) {
+export function initMap(target, { onVehicleClick, onStopClick, onEmptyClick, onZoomChange } = {}) {
   clickHandler = onVehicleClick;
   stopClickHandler = onStopClick;
   emptyClickHandler = onEmptyClick;
+  zoomChangeHandler = onZoomChange;
 
   stopsSource = new VectorSource({ attributions: 'Данные: СНОиПД' });
   routeSource = new VectorSource({ attributions: 'Данные: СНОиПД' });
@@ -532,9 +534,23 @@ export function initMap(target, { onVehicleClick, onStopClick, onEmptyClick } = 
     map.addOverlay(stopPopupOverlay);
   }
 
-  map.on('moveend', updateStopDisplay);
+  let lastZoom = map.getView().getZoom();
+
+  map.on('moveend', () => {
+    updateStopDisplay();
+
+    const zoom = map.getView().getZoom();
+    if (zoom !== lastZoom) {
+      lastZoom = zoom;
+      zoomChangeHandler?.(zoom);
+    }
+  });
 
   return map;
+}
+
+export function getZoom() {
+  return map?.getView().getZoom() ?? 0;
 }
 
 export function showStopPopupAt(coordinate, offsetY = -30) {
