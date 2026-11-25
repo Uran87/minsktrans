@@ -27,6 +27,29 @@ export function normalizeTransportType(value) {
   return null;
 }
 
+/**
+ * mType из /scoreboard: "А" — автобус, "Т" — троллейбус, "#" — трамвай.
+ * Дополнительно поддерживаем текстовые варианты.
+ */
+export function transportTypeFromMType(value) {
+  const v = String(value ?? '').trim().toUpperCase();
+  if (!v) return null;
+
+  if (['А', 'A', 'BUS', 'АВТОБУС'].includes(v)) return 'bus';
+  if (['Т', 'T', 'TROLLEY', 'TROLLEYBUS', 'ТРОЛЛЕЙБУС'].includes(v)) return 'trolley';
+  if (['#', 'ТР', 'TR', 'TRAM', 'ТРАМВАЙ'].includes(v)) return 'tram';
+
+  return normalizeTransportType(v);
+}
+
+export function mTypeBadge(value, type = null) {
+  const t = type || transportTypeFromMType(value);
+  if (t === 'bus') return 'А';
+  if (t === 'trolley') return 'Т';
+  if (t === 'tram') return 'Тр';
+  return value ? String(value) : '?';
+}
+
 export function hexToRgba(hex, alpha = 1) {
   const clean = String(hex).replace('#', '');
   const full = clean.length === 3 ? clean.split('').map((c) => c + c).join('') : clean;

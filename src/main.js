@@ -35,6 +35,7 @@ const state = {
   selectedVehicleId: null,
   detailsVehicleId: null,
   detailsToken: 0,
+  scoreboardToken: 0,
   dataGeneration: 0,
   requestId: 0,
 };
@@ -490,9 +491,35 @@ function handleStopClick(stopId, coordinate) {
     transport: state.transport,
   });
   mapView.showStopPopupAt(coordinate, isRouteStop ? -44 : -30);
+
+  loadScoreboard(Number(stopId));
+}
+
+async function loadScoreboard(stopId) {
+  const token = ++state.scoreboardToken;
+
+  ui.renderScoreboardLoading();
+
+  try {
+    const data = await api.getScoreboard(stopId);
+
+    if (token !== state.scoreboardToken) return;
+
+    ui.renderScoreboard({
+      stopId,
+      routes: data.routes,
+      updatedAt: new Date(),
+    });
+  } catch (error) {
+    if (token !== state.scoreboardToken) return;
+
+    console.warn('[scoreboard]', error);
+    ui.renderScoreboardError(stopId, error);
+  }
 }
 
 function closeStopPopup() {
+  state.scoreboardToken += 1;
   ui.closeStopPopup();
   mapView.hideStopPopup();
 }
@@ -629,6 +656,7 @@ ui.init({
     onDetailsClose: closeDetails,
     onDetailsRetry: (vehicleId) => openDetails(vehicleId),
     onStopPopupClose: closeStopPopup,
+    onScoreboardRefresh: (stopId) => loadScoreboard(stopId),
   },
 });
 

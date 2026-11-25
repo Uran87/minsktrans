@@ -11,8 +11,10 @@ import {
   formatClock,
   formatDeparture,
   hexToRgba,
+  mTypeBadge,
   normalizeTransportType,
   pluralize,
+  transportTypeFromMType,
 } from './constants.js';
 
 const els = {};
@@ -125,6 +127,14 @@ function wireEvents() {
   els.detailsClose.addEventListener('click', () => handlers.onDetailsClose?.());
 
   els.stopPopupClose?.addEventListener('click', () => handlers.onStopPopupClose?.());
+
+  els.stopPopupBody.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-scoreboard-refresh-id], [data-scoreboard-retry-id]');
+    if (!button) return;
+
+    const stopId = button.dataset.scoreboardRefreshId ?? button.dataset.scoreboardRetryId;
+    if (stopId !== undefined) handlers.onScoreboardRefresh?.(Number(stopId));
+  });
 
   els.detailsBody.addEventListener('click', (event) => {
     const button = event.target.closest('button[data-retry-id]');
@@ -411,9 +421,159 @@ export function renderStopPopup({ stop, isRouteStop = false, route, transport })
             `<div class="stop-popup-row"><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`,
         )
         .join('')}
-    </dl>`;
+    </dl>
+    <section class="stop-scoreboard" data-stop-scoreboard aria-live="polite"></section>`;
 
   els.stopPopup.hidden = false;
+}
+
+/* ------------------------------------------------------------------ */
+/* Табло остановки                                                     */
+/* ------------------------------------------------------------------ */
+
+function getScoreboardElement() {
+  return els.stopPopupBody?.querySelector('[data-stop-scoreboard]') || null;
+}
+
+function formatArrival(arrival = {}) {
+  const attribute = String(arrival.attribute ?? '').trim();
+  const seconds = Number(arrival.estimated);
+  const distance = Number(arrival.distance);
+  const vehicleId = Number(arrival.vehicleId);
+
+  let text = '—';
+  let now = false;
+  let empty = true;
+
+  if (/^[aа]$/i.test(attribute)) {
+    text = 'сейчас';
+    now = true;
+    empty = false;
+  } else if (/^\d+$/.test(attribute)) {
+    const minutes = Number(attribute);
+    if (minutes <= 0) {
+      text = 'сейчас';
+      now = true;
+    } else {
+      text = `${minutes} мин`;
+    }
+    empty = false;
+  } else if (Number.isFinite(seconds) && seconds > 30) {
+    text = `${Math.max(1, Math.round(seconds / 60))} мин`;
+    empty = false;
+  } else if (Number.isFinite(seconds) && (vehicleId > 0 || seconds > 0)) {
+    text = 'сейчас';
+    now = true;
+    empty = false;
+  }
+
+  const titleParts = [];
+  if (Number.isFinite(distance) && distance > 0) titleParts.push(`${distance} м до остановки`);
+  if (Number.isFinite(seconds)) {
+    titleParts.push(
+      seconds > 30
+        ? `расчётное прибытие ≈ ${Math.round(seconds / 60)} мин`
+        : 'расчётное прибытие: сейчас',
+    );
+  }
+
+  return { text, now, empty, title: titleParts.join(' · ') || 'нет данных' };
+}
+
+function renderEtaPill(arrival, className = '', label = 'Прибытие') {
+  const eta = formatArrival(arrival);
+  const classes = ['eta-pill'];
+  if (className) classes.push(className);
+  if (eta.now) classes.push('is-now');
+  if (eta.empty) classes.push('is-empty');
+
+  return `<span class="${classes.join(' ')}" title="${esc(eta.title)}"
+    aria-label="${esc(label)}: ${esc(eta.text)}">${esc(eta.text)}</span>`;
+}
+
+export function renderScoreboardLoading() {
+  const box = getScoreboardElement();
+  if (!box) return;
+
+  box.innerHTML = `
+    <div class="scoreboard-head">
+      <div>
+        <h4>Табло остановки</h4>
+        <span class="scoreboard-sub">Запрашиваем прибытие…</span>
+      </div>
+    </div>
+    <div class="scoreboard-loading">
+      <span class="mini-spinner" aria-hidden="true"></span>
+      <span>Загрузка табло…</span>
+    </div>`;
+}
+
+export function renderScoreboard({ stopId, routes = [], updatedAt = new Date() }) {
+  const box = getScoreboardElement();
+  if (!box) return;
+
+  const count = routes.length;
+  const rows = routes
+    .map((route) => {
+      const type = transportTypeFromMType(route.mType);
+      const color = TRANSPORT_COLORS[type] || '#94a3b8';
+      const badgeStyle = `--type-color:${color};--type-soft:${hexToRgba(color, 0.16)};--type-border:${hexToRgba(color, 0.35)}`;
+      const destination = route.endStopName || '—';
+
+      return `<li class="score-row">
+        <span class="score-type" style="${badgeStyle}" title="${esc(TRANSPORT_LABELS[type] || route.mType || 'Транспорт')}">
+          ${esc(mTypeBadge(route.mType, type))}
+        </span>
+        <span class="score-route">
+          <strong>${esc(route.numl)}</strong>
+          <small title="${esc(destination)}">→ ${esc(destination)}</small>
+        </span>
+        <span class="score-etas">
+          ${renderEtaPill(route.first, '', 'Ближайший')}
+          ${renderEtaPill(route.next, 'is-next', 'Следующий')}
+        </span>
+      </li>`;
+    })
+    .join('');
+
+  box.innerHTML = `
+    <div class="scoreboard-head">
+      <div>
+        <h4>Табло остановки</h4>
+        <span class="scoreboard-sub">
+          ${count} ${pluralize(count, ['маршрут', 'маршрута', 'маршрутов'])} · 2 ближайших · обновлено ${formatClock(new Date(updatedAt))}
+        </span>
+      </div>
+      <button type="button" class="scoreboard-refresh" data-scoreboard-refresh-id="${esc(stopId)}"
+              aria-label="Обновить табло остановки" title="Обновить табло">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20 11a8 8 0 1 0-2.34 6.34M20 4v7h-7" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+    ${
+      rows
+        ? `<ul class="scoreboard-list">${rows}</ul>`
+        : '<p class="empty-note">На этой остановке сейчас нет данных о маршрутах.</p>'
+    }`;
+}
+
+export function renderScoreboardError(stopId, error) {
+  const box = getScoreboardElement();
+  if (!box) return;
+
+  box.innerHTML = `
+    <div class="scoreboard-head">
+      <div>
+        <h4>Табло остановки</h4>
+        <span class="scoreboard-sub">не удалось загрузить</span>
+      </div>
+    </div>
+    <p class="scoreboard-error">${esc(error?.message || 'Ошибка API')}</p>
+    <button type="button" class="btn btn-ghost btn-sm" data-scoreboard-retry-id="${esc(stopId)}">
+      Повторить
+    </button>`;
 }
 
 export function closeStopPopup() {

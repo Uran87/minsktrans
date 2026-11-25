@@ -372,6 +372,59 @@ export function normalizeScheduleDay(payload) {
   return { trips };
 }
 
+/**
+ * Нормализация /scoreboard: табло остановки с двумя ближайшими ТС на маршрут.
+ */
+function normalizeArrival(route, suffix) {
+  const number = (value) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  const attribute = route[`attribute${suffix}`];
+
+  return {
+    attribute: attribute === null || attribute === undefined ? '' : String(attribute).trim(),
+    vehicleId: number(route[`idVehicle${suffix}`]),
+    distance: number(route[`distanceFactMeters${suffix}`]),
+    planned: number(route[`plannedArrivalTimeSec${suffix}`]),
+    deviation: number(route[`deviationPlanFactSec${suffix}`]),
+    estimated: number(route[`estimatedTimeArrivalSec${suffix}`]),
+  };
+}
+
+export function normalizeScoreboard(payload) {
+  const data = Array.isArray(payload) ? payload[0] : payload;
+
+  if (!data || typeof data !== 'object') {
+    return { stopName: '', routes: [] };
+  }
+
+  const routeList = Array.isArray(data.routes) ? data.routes : [];
+
+  const routes = routeList
+    .map((route) => {
+      if (!route || typeof route !== 'object') return null;
+
+      const numl = String(route.numl ?? route.num1 ?? '').trim();
+      if (!numl) return null;
+
+      return {
+        mType: String(route.mType ?? '').trim(),
+        numl,
+        endStopName: String(route.endStopName ?? '').trim(),
+        first: normalizeArrival(route, 'First'),
+        next: normalizeArrival(route, 'Next'),
+      };
+    })
+    .filter(Boolean);
+
+  return {
+    stopName: String(data.stopName ?? '').trim(),
+    routes,
+  };
+}
+
 /* ------------------------------------------------------------------ */
 /* Публичные запросы                                                   */
 /* ------------------------------------------------------------------ */
@@ -403,4 +456,12 @@ export async function getScheduleDay({ transport, route }) {
     : await fetchJson('/scheduleDay', { transport, route });
 
   return normalizeScheduleDay(raw);
+}
+
+export async function getScoreboard(stopId) {
+  const raw = mockEnabled
+    ? await mockApi.scoreboard(stopId)
+    : await fetchJson('/scoreboard', { idStop: stopId, txt: 'false' });
+
+  return normalizeScoreboard(raw);
 }

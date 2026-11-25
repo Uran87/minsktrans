@@ -119,10 +119,12 @@ const CITY_STOPS = [
   { id: 15167, name: 'Проспект Жукова', lat: 53.89543, lon: 27.499876 },
   { id: 15190, name: 'Переспа', lat: 53.92061, lon: 27.550247 },
   { id: 15207, name: 'Хмелевского', lat: 53.889454, lon: 27.522268 },
+  { id: 15219, name: 'Проспект Машерова', nameBy: 'Праспект Машэрава', nameEn: 'Praspiekt Mašerava', lat: 53.917637, lon: 27.564814 },
   { id: 15344, name: 'Варвашени', lat: 53.864502, lon: 27.66601 },
   { id: 15533, name: 'Ташкентская', lat: 53.839058, lon: 27.63048 },
   { id: 15564, name: 'Технологический университет', lat: 53.89175, lon: 27.557547 },
   { id: 15600, name: 'Ст. м. «Немига»', nameBy: 'Станцыя метро «Няміга»', nameEn: 'Niamiha st.m.', lat: 53.906036, lon: 27.55512 },
+  { id: 15742, name: 'Проспект Независимости', nameBy: 'Праспект Незалежнасці', nameEn: "pr-t Niezaliežnasci", lat: 53.91013, lon: 27.578432 },
   { id: 15675, name: 'Щорса', lat: 53.8803, lon: 27.52047 },
   { id: 15867, name: 'Ленина', lat: 53.89996, lon: 27.5583 },
   { id: 15905, name: 'Аранская', lat: 53.88613, lon: 27.569866 },
@@ -269,6 +271,318 @@ export function stops() {
     mapPolygon: `POINT (${stop.lon} ${stop.lat})`,
     mspsid: '',
   }));
+}
+
+/* ------------------------------------------------------------------ */
+/* Демо-табло остановок                                                */
+/* ------------------------------------------------------------------ */
+
+/** Реальный ответ API для idStop=15219 (Проспект Машерова). */
+const SCOREBOARD_TROLLEY = {
+  stopName: 'Проспект Машерова',
+  routes: [
+    {
+      mType: 'Т',
+      numl: '53',
+      endStopName: 'Зелёный Луг-6',
+      attributeFirst: '3',
+      attributeNext: '15',
+      idVehicleFirst: 446348,
+      idVehicleNext: 13627,
+      distanceFactMetersFirst: 680,
+      distanceFactMetersNext: 3889,
+      plannedArrivalTimeSecFirst: 189,
+      plannedArrivalTimeSecNext: 849,
+      deviationPlanFactSecFirst: -29,
+      deviationPlanFactSecNext: 40,
+      estimatedTimeArrivalSecFirst: 160,
+      estimatedTimeArrivalSecNext: 889,
+    },
+    {
+      mType: 'Т',
+      numl: '37',
+      endStopName: "ДС ''Уручье-4''",
+      attributeFirst: '6',
+      attributeNext: '20',
+      idVehicleFirst: 445538,
+      idVehicleNext: 445577,
+      distanceFactMetersFirst: 1598,
+      distanceFactMetersNext: 741,
+      plannedArrivalTimeSecFirst: -171,
+      plannedArrivalTimeSecNext: 969,
+      deviationPlanFactSecFirst: 529,
+      deviationPlanFactSecNext: 218,
+      estimatedTimeArrivalSecFirst: 358,
+      estimatedTimeArrivalSecNext: 1187,
+    },
+    {
+      mType: 'А',
+      numl: '91',
+      endStopName: "ДС ''Калиновского''",
+      attributeFirst: '24',
+      attributeNext: '52',
+      idVehicleFirst: 445034,
+      idVehicleNext: 445463,
+      distanceFactMetersFirst: 5097,
+      distanceFactMetersNext: 2053,
+      plannedArrivalTimeSecFirst: 1329,
+      plannedArrivalTimeSecNext: 2829,
+      deviationPlanFactSecFirst: 82,
+      deviationPlanFactSecNext: 315,
+      estimatedTimeArrivalSecFirst: 1411,
+      estimatedTimeArrivalSecNext: 3144,
+    },
+    {
+      mType: 'Т',
+      numl: '46',
+      endStopName: 'Зелёный Луг-6',
+      attributeFirst: '74',
+      attributeNext: '98',
+      idVehicleFirst: 0,
+      idVehicleNext: 0,
+      distanceFactMetersFirst: 0,
+      distanceFactMetersNext: 0,
+      plannedArrivalTimeSecFirst: 4449,
+      plannedArrivalTimeSecNext: 5889,
+      deviationPlanFactSecFirst: 0,
+      deviationPlanFactSecNext: 0,
+      estimatedTimeArrivalSecFirst: 4449,
+      estimatedTimeArrivalSecNext: 5889,
+    },
+  ],
+};
+
+/** Реальный ответ API для idStop=15742 (в демо привязан к Проспекту Независимости). */
+const SCOREBOARD_BUS = {
+  stopName: 'Проспект Независимости',
+  routes: [
+    {
+      mType: 'А',
+      numl: '29',
+      endStopName: "ДС ''Кунцевщина''",
+      attributeFirst: 'A',
+      attributeNext: '21',
+      idVehicleFirst: 445016,
+      idVehicleNext: 445663,
+      distanceFactMetersFirst: 89,
+      distanceFactMetersNext: 2029,
+      plannedArrivalTimeSecFirst: -197,
+      plannedArrivalTimeSecNext: 943,
+      deviationPlanFactSecFirst: 193,
+      deviationPlanFactSecNext: 288,
+      estimatedTimeArrivalSecFirst: -4,
+      estimatedTimeArrivalSecNext: 1231,
+    },
+    {
+      mType: 'А',
+      numl: '18',
+      endStopName: 'Новинки',
+      attributeFirst: '4',
+      attributeNext: '28',
+      idVehicleFirst: 444852,
+      idVehicleNext: 445583,
+      distanceFactMetersFirst: 593,
+      distanceFactMetersNext: 2050,
+      plannedArrivalTimeSecFirst: -17,
+      plannedArrivalTimeSecNext: 1483,
+      deviationPlanFactSecFirst: 238,
+      deviationPlanFactSecNext: 192,
+      estimatedTimeArrivalSecFirst: 221,
+      estimatedTimeArrivalSecNext: 1675,
+    },
+    {
+      mType: 'А',
+      numl: '26',
+      endStopName: 'Павлины Медёлки',
+      attributeFirst: '4',
+      attributeNext: '20',
+      idVehicleFirst: 446361,
+      idVehicleNext: 445334,
+      distanceFactMetersFirst: 724,
+      distanceFactMetersNext: 3044,
+      plannedArrivalTimeSecFirst: 223,
+      plannedArrivalTimeSecNext: 1123,
+      deviationPlanFactSecFirst: 35,
+      deviationPlanFactSecNext: 54,
+      estimatedTimeArrivalSecFirst: 258,
+      estimatedTimeArrivalSecNext: 1177,
+    },
+    {
+      mType: 'А',
+      numl: '39',
+      endStopName: 'Щедрина',
+      attributeFirst: '6',
+      attributeNext: '75',
+      idVehicleFirst: 445521,
+      idVehicleNext: 0,
+      distanceFactMetersFirst: 1344,
+      distanceFactMetersNext: 0,
+      plannedArrivalTimeSecFirst: 343,
+      plannedArrivalTimeSecNext: 4483,
+      deviationPlanFactSecFirst: 44,
+      deviationPlanFactSecNext: 0,
+      estimatedTimeArrivalSecFirst: 387,
+      estimatedTimeArrivalSecNext: 4483,
+    },
+    {
+      mType: 'А',
+      numl: '44',
+      endStopName: "Станция ''Ждановичи''",
+      attributeFirst: '10',
+      attributeNext: '40',
+      idVehicleFirst: 445039,
+      idVehicleNext: 446393,
+      distanceFactMetersFirst: 2484,
+      distanceFactMetersNext: 1921,
+      plannedArrivalTimeSecFirst: 583,
+      plannedArrivalTimeSecNext: 1783,
+      deviationPlanFactSecFirst: 16,
+      deviationPlanFactSecNext: 619,
+      estimatedTimeArrivalSecFirst: 599,
+      estimatedTimeArrivalSecNext: 2402,
+    },
+    {
+      mType: 'А',
+      numl: '26д',
+      endStopName: 'Александра Воинова',
+      attributeFirst: '11',
+      attributeNext: '43',
+      idVehicleFirst: 445501,
+      idVehicleNext: 444889,
+      distanceFactMetersFirst: 2031,
+      distanceFactMetersNext: 540,
+      plannedArrivalTimeSecFirst: 643,
+      plannedArrivalTimeSecNext: 2503,
+      deviationPlanFactSecFirst: -9,
+      deviationPlanFactSecNext: 52,
+      estimatedTimeArrivalSecFirst: 634,
+      estimatedTimeArrivalSecNext: 2555,
+    },
+    {
+      mType: 'А',
+      numl: '263',
+      endStopName: 'Нововиленская',
+      attributeFirst: '14',
+      attributeNext: '32',
+      idVehicleFirst: 445868,
+      idVehicleNext: 444910,
+      distanceFactMetersFirst: 2974,
+      distanceFactMetersNext: 2747,
+      plannedArrivalTimeSecFirst: 763,
+      plannedArrivalTimeSecNext: 1903,
+      deviationPlanFactSecFirst: 50,
+      deviationPlanFactSecNext: 33,
+      estimatedTimeArrivalSecFirst: 813,
+      estimatedTimeArrivalSecNext: 1936,
+    },
+    {
+      mType: 'А',
+      numl: '46',
+      endStopName: "ДС ''Лермонтова''",
+      attributeFirst: '16',
+      attributeNext: '43',
+      idVehicleFirst: 446384,
+      idVehicleNext: 445308,
+      distanceFactMetersFirst: 829,
+      distanceFactMetersNext: 4606,
+      plannedArrivalTimeSecFirst: 883,
+      plannedArrivalTimeSecNext: 2503,
+      deviationPlanFactSecFirst: 104,
+      deviationPlanFactSecNext: 104,
+      estimatedTimeArrivalSecFirst: 987,
+      estimatedTimeArrivalSecNext: 2607,
+    },
+    {
+      mType: 'А',
+      numl: '26а',
+      endStopName: 'Павлины Медёлки',
+      attributeFirst: '36',
+      attributeNext: '-',
+      idVehicleFirst: 0,
+      idVehicleNext: 0,
+      distanceFactMetersFirst: 0,
+      distanceFactMetersNext: -1,
+      plannedArrivalTimeSecFirst: 2143,
+      plannedArrivalTimeSecNext: 0,
+      deviationPlanFactSecFirst: 0,
+      deviationPlanFactSecNext: 0,
+      estimatedTimeArrivalSecFirst: 2143,
+      estimatedTimeArrivalSecNext: 0,
+    },
+  ],
+};
+
+const MOCK_SCOREBOARD_ROUTES = [
+  { mType: 'А', numl: '1', endStopName: "ДС ''Веснянка''" },
+  { mType: 'А', numl: '29', endStopName: "ДС ''Кунцевщина''" },
+  { mType: 'Т', numl: '53', endStopName: 'Зелёный Луг-6' },
+  { mType: 'Т', numl: '37', endStopName: "ДС ''Уручье-4''" },
+  { mType: 'А', numl: '91', endStopName: "ДС ''Калиновского''" },
+  { mType: 'Т', numl: '46', endStopName: 'Зелёный Луг-6' },
+  { mType: 'А', numl: '26', endStopName: 'Павлины Медёлки' },
+  { mType: '#', numl: '1', endStopName: "ДС ''Зелёный Луг''" },
+  { mType: 'А', numl: '44', endStopName: "Станция ''Ждановичи''" },
+];
+
+function stopNameById(stopId) {
+  const stop = [...STOP_DEFS, ...CITY_STOPS].find((item) => item.id === Number(stopId));
+  return stop?.name || '';
+}
+
+function makeMockScoreboard(stopId) {
+  const id = Number(stopId);
+  const seed = Math.abs(id) || 1;
+  const isRouteOneStop = STOP_DEFS.some((stop) => stop.id === id);
+  const count = 2 + (seed % 3);
+
+  const selected = [];
+
+  if (isRouteOneStop) {
+    selected.push(MOCK_SCOREBOARD_ROUTES[0]);
+  }
+
+  for (let index = 0; selected.length < count && index < MOCK_SCOREBOARD_ROUTES.length; index += 1) {
+    const route = MOCK_SCOREBOARD_ROUTES[(seed + index * 3) % MOCK_SCOREBOARD_ROUTES.length];
+    if (selected.some((item) => item.numl === route.numl && item.mType === route.mType)) continue;
+    selected.push(route);
+  }
+
+  const routes = selected.map((route, index) => {
+    const firstSec = 25 + ((seed * 3 + index * 137) % 900);
+    const nextSec = firstSec + 260 + ((seed * 7 + index * 211) % 1200);
+    const firstMinutes = Math.max(1, Math.round(firstSec / 60));
+    const nextMinutes = Math.max(firstMinutes + 1, Math.round(nextSec / 60));
+    const arriving = (seed + index) % 5 === 0;
+
+    return {
+      mType: route.mType,
+      numl: route.numl,
+      endStopName: route.endStopName,
+      attributeFirst: arriving ? 'A' : String(firstMinutes),
+      attributeNext: String(nextMinutes),
+      idVehicleFirst: 400000 + ((seed + index * 37) % 9000),
+      idVehicleNext: 400000 + ((seed + index * 73) % 9000),
+      distanceFactMetersFirst: 55 + ((seed * 5 + index * 83) % 2800),
+      distanceFactMetersNext: 350 + ((seed * 9 + index * 157) % 3600),
+      plannedArrivalTimeSecFirst: arriving ? -5 : firstSec,
+      plannedArrivalTimeSecNext: nextSec,
+      deviationPlanFactSecFirst: ((seed + index * 11) % 120) - 30,
+      deviationPlanFactSecNext: ((seed + index * 17) % 180) - 40,
+      estimatedTimeArrivalSecFirst: arriving ? -4 : firstSec + 25,
+      estimatedTimeArrivalSecNext: nextSec + 30,
+    };
+  });
+
+  return { stopName: stopNameById(id), routes };
+}
+
+export function scoreboard(stopId) {
+  const id = Number(stopId);
+
+  if (id === 15219) return SCOREBOARD_TROLLEY;
+  if (id === 15742) return SCOREBOARD_BUS;
+
+  return makeMockScoreboard(id);
 }
 
 export function vehicleState(vehicleId) {
