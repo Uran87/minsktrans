@@ -12,7 +12,7 @@ import './style.css';
 import * as api from './api.js';
 import * as mapView from './map.js';
 import * as ui from './ui.js';
-import { POLL_INTERVAL, TRANSPORT_TYPES, normalizeTransportType } from './constants.js';
+import { POLL_INTERVAL, TRANSPORT_TYPES, normalizeTransportType, transportTypeFromMType } from './constants.js';
 
 const PREFS_KEY = 'minsktrans:prefs:v1';
 const VALID_LAYERS = ['map', 'satellite', 'hybrid'];
@@ -457,16 +457,19 @@ function pickTrip(trips, vehicle) {
   );
 }
 
-async function openDetails(vehicleId) {
+async function openDetails(vehicleId, transportHint = null) {
   const token = ++state.detailsToken;
   closeStopPopup();
   state.detailsVehicleId = String(vehicleId);
 
-  ui.showDetailsLoading(vehicleId, state.transport);
+  ui.showDetailsLoading(vehicleId, transportHint || state.transport);
 
   try {
     const vehicle = await api.getVehicleState(vehicleId);
-    const transport = normalizeTransportType(vehicle.tsType) || state.transport;
+    const transport =
+      normalizeTransportType(vehicle.tsType) ||
+      normalizeTransportType(transportHint) ||
+      state.transport;
     const route = vehicle.marNuml || state.route;
 
     let schedule = null;
@@ -509,7 +512,7 @@ async function openDetails(vehicleId) {
   }
 }
 
-function selectVehicle(vehicleId, focus) {
+function selectVehicle(vehicleId, focus, transportHint = null) {
   closeStopPopup();
   state.selectedVehicleId = String(vehicleId);
   mapView.setSelectedVehicle(vehicleId);
@@ -523,7 +526,7 @@ function selectVehicle(vehicleId, focus) {
   );
 
   if (focus) mapView.focusVehicle(vehicleId);
-  openDetails(vehicleId);
+  openDetails(vehicleId, transportHint);
 }
 
 function closeDetails() {
@@ -745,6 +748,8 @@ ui.init({
     onStopSelect: handleTripStopSelect,
     onStopPopupClose: closeStopPopup,
     onScoreboardRefresh: (stopId) => loadScoreboard(stopId),
+    onScoreboardVehicleSelect: (vehicleId, mType) =>
+      selectVehicle(vehicleId, true, transportTypeFromMType(mType)),
   },
 });
 
