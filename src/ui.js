@@ -545,26 +545,15 @@ function formatArrival(arrival = {}) {
   return { text, now, empty, title: titleParts.join(' · ') || 'нет данных' };
 }
 
-function renderEtaPill(arrival, className = '', label = 'Прибытие', mType = '') {
+function renderEtaPill(arrival, className = '', label = 'Прибытие') {
   const eta = formatArrival(arrival);
   const classes = ['eta-pill'];
   if (className) classes.push(className);
   if (eta.now) classes.push('is-now');
   if (eta.empty) classes.push('is-empty');
 
-  const vehicleId = Number(arrival.vehicleId);
-  const clickable = Number.isFinite(vehicleId) && vehicleId > 0;
-  const title = clickable ? `${eta.title} · Открыть карточку транспорта` : eta.title;
-  const aria = `${label}: ${eta.text}${clickable ? '. Открыть карточку транспорта' : ''}`;
-
-  if (!clickable) {
-    return `<span class="${classes.join(' ')}" title="${esc(title)}"
-      aria-label="${esc(aria)}">${esc(eta.text)}</span>`;
-  }
-
-  return `<button type="button" class="${classes.join(' ')}"
-    data-scoreboard-vehicle-id="${vehicleId}" data-scoreboard-vehicle-type="${esc(mType)}"
-    title="${esc(title)}" aria-label="${esc(aria)}">${esc(eta.text)}</button>`;
+  return `<span class="${classes.join(' ')}" title="${esc(eta.title)}"
+    aria-label="${esc(label)}: ${esc(eta.text)}">${esc(eta.text)}</span>`;
 }
 
 export function renderScoreboardLoading() {
@@ -598,23 +587,25 @@ export function renderScoreboard({ stopId, routes = [], updatedAt = new Date() }
       const firstId = Number(route.first?.vehicleId) || 0;
       const nextId = Number(route.next?.vehicleId) || 0;
       const nearestId = firstId > 0 ? firstId : nextId;
-      const routeTag = nearestId > 0 ? 'button' : 'span';
-      const routeAttrs =
+      const mainTag = nearestId > 0 ? 'button' : 'span';
+      const mainAttrs =
         nearestId > 0
           ? ` type="button" data-scoreboard-vehicle-id="${nearestId}" data-scoreboard-vehicle-type="${esc(route.mType)}" title="Открыть карточку транспорта маршрута ${esc(route.numl)}"`
           : '';
 
       return `<li class="score-row">
-        <span class="score-type" style="${badgeStyle}" title="${esc(TRANSPORT_LABELS[type] || route.mType || 'Транспорт')}">
-          ${esc(mTypeBadge(route.mType, type))}
-        </span>
-        <${routeTag} class="score-route"${routeAttrs}>
-          <strong>${esc(route.numl)}</strong>
-          <small title="${esc(destination)}">→ ${esc(destination)}</small>
-        </${routeTag}>
+        <${mainTag} class="score-main"${mainAttrs}>
+          <span class="score-type" style="${badgeStyle}" title="${esc(TRANSPORT_LABELS[type] || route.mType || 'Транспорт')}">
+            ${esc(mTypeBadge(route.mType, type))}
+          </span>
+          <span class="score-route">
+            <strong>${esc(route.numl)}</strong>
+            <small title="${esc(destination)}">→ ${esc(destination)}</small>
+          </span>
+        </${mainTag}>
         <span class="score-etas">
-          ${renderEtaPill(route.first, '', 'Ближайший', route.mType)}
-          ${renderEtaPill(route.next, 'is-next', 'Следующий', route.mType)}
+          ${renderEtaPill(route.first, '', 'Ближайший')}
+          ${renderEtaPill(route.next, 'is-next', 'Следующий')}
         </span>
       </li>`;
     })
