@@ -134,6 +134,7 @@ function wireEvents() {
         handlers.onScoreboardVehicleSelect?.(
           vehicleId,
           vehicleButton.dataset.scoreboardVehicleType || '',
+          vehicleButton.dataset.scoreboardRoute || '',
         );
       }
       return;
@@ -191,6 +192,10 @@ export function setActiveTransport(type) {
 
 export function getTransport() {
   return currentTransport;
+}
+
+export function setRouteValue(route) {
+  els.routeInput.value = route || '';
 }
 
 export function setActiveLayer(layer) {
@@ -606,7 +611,7 @@ export function renderScoreboard({ stopId, routes = [], updatedAt = new Date() }
       const mainTag = nearestId > 0 ? 'button' : 'span';
       const mainAttrs =
         nearestId > 0
-          ? ` type="button" data-scoreboard-vehicle-id="${nearestId}" data-scoreboard-vehicle-type="${esc(route.mType)}" title="Открыть карточку транспорта маршрута ${esc(route.numl)}"`
+          ? ` type="button" data-scoreboard-vehicle-id="${nearestId}" data-scoreboard-vehicle-type="${esc(route.mType)}" data-scoreboard-route="${esc(route.numl)}" title="Открыть карточку транспорта маршрута ${esc(route.numl)}"`
           : '';
 
       return `<li class="score-row">

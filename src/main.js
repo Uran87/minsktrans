@@ -609,6 +609,71 @@ function selectVehicle(vehicleId, focus, transportHint = null) {
   openDetails(vehicleId, transportHint);
 }
 
+async function findVehicleCoordinate(transport, route, vehicleId) {
+  try {
+    const vehicles = await api.getGeoInfo({ transport, route });
+    if (!vehicles.length) return null;
+
+    const target =
+      vehicles.find((vehicle) => String(vehicle.vehicleId) === String(vehicleId)) ||
+      vehicles[0];
+
+    return target ? { lon: target.lon, lat: target.lat } : null;
+  } catch (error) {
+    console.warn('[scoreboardVehicle]', error);
+    return null;
+  }
+}
+
+async function selectScoreboardVehicle(vehicleId, mType, routeNuml) {
+  const type = transportTypeFromMType(mType) || state.transport;
+  const route = String(routeNuml || '').trim() || state.route;
+  const typeChanged = type !== state.transport;
+
+  closeStopPopup();
+  if (ui.isDetailsOpen()) closeDetails();
+
+  state.transport = type;
+  state.route = route;
+  ui.setActiveTransport(type);
+  ui.setRouteValue(route);
+  savePrefs({ transport: type, route });
+  loadRouteOptions(type);
+
+  if (typeChanged) {
+    state.vehicles = [];
+    state.routeVehicles = [];
+    state.fleetRoutes = 0;
+    state.routeGeometry = null;
+    mapView.clearVehicles();
+  }
+
+  state.selectedVehicleId = String(vehicleId);
+  mapView.setSelectedVehicle(vehicleId);
+
+  const routePromise = showRoute();
+  openDetails(vehicleId, type);
+  await routePromise;
+
+  if (typeChanged) pollOnce();
+  else renderRouteVehicles();
+
+  const coordinate = await findVehicleCoordinate(type, route, vehicleId);
+  if (
+    state.selectedVehicleId !== String(vehicleId) ||
+    type !== state.transport ||
+    route !== state.route
+  ) {
+    return;
+  }
+
+  if (coordinate) {
+    mapView.focusCoordinates(coordinate.lon, coordinate.lat, 16);
+  } else {
+    mapView.focusVehicle(vehicleId);
+  }
+}
+
 function closeDetails() {
   state.detailsToken += 1;
   state.detailsVehicleId = null;
@@ -838,8 +903,8 @@ ui.init({
     onStopSelect: handleTripStopSelect,
     onStopPopupClose: closeStopPopup,
     onScoreboardRefresh: (stopId) => loadScoreboard(stopId),
-    onScoreboardVehicleSelect: (vehicleId, mType) =>
-      selectVehicle(vehicleId, true, transportTypeFromMType(mType)),
+    onScoreboardVehicleSelect: (vehicleId, mType, routeNuml) =>
+      selectScoreboardVehicle(vehicleId, mType, routeNuml),
   },
 });
 

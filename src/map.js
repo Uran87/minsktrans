@@ -539,6 +539,17 @@ export function focusVehicle(vehicleId) {
   });
 }
 
+export function focusCoordinates(lon, lat, zoom = 16) {
+  if (!map) return;
+
+  const view = map.getView();
+  view.animate({
+    center: fromLonLat([lon, lat]),
+    zoom: Math.max(view.getZoom() ?? 12, zoom),
+    duration: 500,
+  });
+}
+
 /**
  * Приближает/центрирует карту к остановке и возвращает её координату,
  * чтобы можно было сразу показать попап. Центр учитывает левую панель.
