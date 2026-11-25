@@ -151,7 +151,6 @@ async function showRoute() {
 
   state.loading = true;
   ui.setLoading(true);
-  ui.setStatus({ text: 'Загружаем маршрут…', live: false });
 
   try {
     const stopsMap = await ensureStops();
@@ -192,14 +191,11 @@ async function showRoute() {
     const now = new Date();
     state.lastPollAt = now.getTime();
 
-    ui.setStatus({ text: fleetStatusText(), time: now, live: true });
-
     if (routeVehicles.length > 0 && orderIds.length === 0) {
       ui.toast('Линия маршрута не построена: API не вернул порядок остановок.', 'info', 5000);
     }
   } catch (error) {
     console.error('[showRoute]', error);
-    ui.setStatus({ text: 'Ошибка загрузки', live: false, error: true });
     ui.toast(`Не удалось загрузить маршрут: ${error.message}`, 'error', 7000);
   } finally {
     if (requestId === state.requestId) {
@@ -270,22 +266,6 @@ function renderRouteVehicles() {
       { route: state.route, stops: state.routeStops },
     );
   }
-
-  ui.setStatusVehiclesCount(
-    state.routeStops.length ? state.routeVehicles.length : state.vehicles.length,
-  );
-}
-
-function fleetStatusText() {
-  if (!state.routeStops.length) {
-    return state.vehicles.length > 0
-      ? `Онлайн · ${state.vehicles.length} машин на карте`
-      : 'Машин на карте нет';
-  }
-
-  return state.routeVehicles.length > 0
-    ? `Онлайн · маршрут №${state.route} · ${state.routeVehicles.length} машин`
-    : `Машин на маршруте №${state.route} нет`;
 }
 
 /**
@@ -474,20 +454,8 @@ async function pollOnce() {
 
     state.lastPollAt = Date.now();
     state.pollErrorShown = false;
-
-    ui.setStatus({
-      text: fleetStatusText(),
-      time: new Date(),
-      live: true,
-    });
   } catch (error) {
     console.error('[poll]', error);
-    ui.setStatus({
-      text: 'Нет связи с API',
-      live: false,
-      error: true,
-      time: state.lastPollAt ? new Date(state.lastPollAt) : null,
-    });
 
     if (!state.pollErrorShown) {
       state.pollErrorShown = true;
@@ -836,10 +804,6 @@ function handleMockChange(enabled) {
   loadRouteOptions(state.transport, true);
 
   ui.setMockChecked(enabled);
-  ui.setStatus({
-    text: enabled ? 'Демо-режим включён' : 'Режим API включён',
-    live: false,
-  });
 
   ui.toast(
     enabled
@@ -920,11 +884,6 @@ startPolling();
 pollOnce();
 loadRouteOptions(prefs.transport);
 loadAllStops();
-
-ui.setStatus({
-  text: prefs.mock ? 'Демо-режим · маршрут №1' : 'Готово к запуску',
-  live: false,
-});
 
 document.addEventListener('visibilitychange', handleVisibility);
 window.addEventListener('pagehide', () => stopPolling(true));

@@ -60,10 +60,6 @@ export function init(config) {
   els.transportToggle = document.getElementById('transport-toggle');
   els.routeInput = document.getElementById('route-input');
   els.routeMenu = document.getElementById('route-menu');
-  els.statusText = document.getElementById('status-text');
-  els.statusTime = document.getElementById('last-update');
-  els.liveDot = document.getElementById('live-dot');
-  els.vehiclesCount = document.getElementById('vehicles-count');
   els.vehiclesBadge = document.getElementById('vehicles-badge');
   els.vehiclesList = document.getElementById('vehicles-list');
   els.layerToggle = document.getElementById('layer-toggle');
@@ -350,19 +346,6 @@ export function setLoading(loading) {
   els.loadingBar.classList.toggle('is-active', loading);
 }
 
-export function setStatusVehiclesCount(count) {
-  els.vehiclesCount.textContent = `${count} ${pluralize(count, ['машина', 'машины', 'машин'])}`;
-}
-
-export function setStatus({ text, time = null, live = false, error = false }) {
-  els.statusText.textContent = text || '';
-  els.statusTime.textContent = time ? formatClock(new Date(time)) : '';
-  els.statusTime.dateTime = time ? new Date(time).toISOString() : '';
-
-  els.liveDot.classList.toggle('is-live', Boolean(live) && !error);
-  els.liveDot.classList.toggle('is-error', Boolean(error));
-}
-
 export function renderVehicles(vehicles, transport, selectedId = null, emptyText = null, context = {}) {
   const count = vehicles.length;
   const type = normalizeTransportType(transport) || 'bus';
@@ -371,7 +354,6 @@ export function renderVehicles(vehicles, transport, selectedId = null, emptyText
   const routeNumber = context.route ? String(context.route).trim() : '';
   const routeTitle = routeNumber ? `${typeLabel} №${routeNumber}` : typeLabel;
 
-  els.vehiclesCount.textContent = `${count} ${pluralize(count, ['машина', 'машины', 'машин'])}`;
   els.vehiclesBadge.textContent = String(count);
 
   if (!count) {
