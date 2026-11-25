@@ -1372,9 +1372,16 @@ button:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  max-height: 180px;
   margin: 0;
   padding: 0;
+  padding-right: 2px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   list-style: none;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
 }
 
 .score-row {
