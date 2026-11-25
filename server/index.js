@@ -3,6 +3,7 @@ import { pathToFileURL } from 'node:url';
 import { config } from './config.js';
 import { openDatabase } from './db.js';
 import { jobRegistry, runJob } from './jobs.js';
+import { getLiveSnapshot, getLiveSummary, startLivePoller, stopLivePoller } from './live.js';
 import { startScheduler, stopScheduler } from './scheduler.js';
 import { errorMessage } from './util.js';
 
@@ -270,8 +271,24 @@ async function handle(db, req, res) {
         geometryVersions: Number(geometry.count),
         gpsSamples: Number(samples.count),
       },
+      live: getLiveSummary(),
       jobs: Object.keys(jobRegistry),
     });
+    return;
+  }
+
+  if (path === '/api/live/vehicles') {
+    const transport = (url.searchParams.get('transport') || 'bus').trim();
+    if (!['bus', 'trolley', 'tram'].includes(transport)) {
+      sendError(res, 400, 'Неизвестный тип транспорта');
+      return;
+    }
+
+    try {
+      sendJson(res, 200, await getLiveSnapshot(db, transport));
+    } catch (error) {
+      sendError(res, 502, errorMessage(error));
+    }
     return;
   }
 
@@ -405,10 +422,12 @@ export async function main() {
   });
 
   startScheduler(db);
+  startLivePoller(db);
 
   const shutdown = () => {
     log('останавливаюсь');
     stopScheduler();
+    stopLivePoller();
     server.close(() => {
       db.close();
       process.exit(0);

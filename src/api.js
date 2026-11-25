@@ -14,6 +14,7 @@ const API_BASE = (import.meta.env.VITE_API_BASE || '/api/v1').replace(/\/+$/, ''
 const LOCAL_API_BASE = (import.meta.env.VITE_LOCAL_API_BASE || '/api').replace(/\/+$/, '');
 const REQUEST_TIMEOUT = 25_000;
 const LOCAL_REQUEST_TIMEOUT = 4_000;
+const LOCAL_LIVE_TIMEOUT = 20_000;
 
 const envMockDefault = import.meta.env.VITE_MOCK_DEFAULT;
 let mockEnabled =
@@ -437,6 +438,85 @@ export async function getGeoInfo({ transport, route }) {
     : await fetchJson('/geoinfomar', { transport, route });
 
   return normalizeVehicles(raw);
+}
+
+/**
+ * Все ТС выбранного типа со всех маршрутов (backend агрегирует geoinfomar).
+ */
+export async function getAllVehicles({ transport }) {
+  if (mockEnabled) {
+    const raw = await mockApi.geoInfo({ transport });
+    const vehicles = normalizeVehicles(raw).map((vehicle) => ({
+      ...vehicle,
+      route: '1',
+      mtype: transport,
+    }));
+
+    return {
+      vehicles,
+      routes: 1,
+      errors: 0,
+      stale: false,
+      updatedAt: new Date().toISOString(),
+    };
+  }
+
+  const params = new URLSearchParams({ transport: String(transport) });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), LOCAL_LIVE_TIMEOUT);
+
+  try {
+    const response = await fetch(`${LOCAL_API_BASE}/live/vehicles?${params.toString()}`, {
+      headers: { Accept: 'application/json' },
+      signal: controller.signal,
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      throw new ApiError(`Backend ответил HTTP ${response.status}`, {
+        statusCode: response.status,
+      });
+    }
+
+    const payload = await response.json();
+    const vehicles = Array.isArray(payload?.vehicles)
+      ? payload.vehicles
+          .map((vehicle) => {
+            const vehicleId = Number(vehicle.vehicleId);
+            const lat = Number(vehicle.lat);
+            const lon = Number(vehicle.lon);
+            if (!Number.isFinite(vehicleId) || !Number.isFinite(lat) || !Number.isFinite(lon)) {
+              return null;
+            }
+            return {
+              vehicleId,
+              direction: Number.isFinite(Number(vehicle.direction)) ? Number(vehicle.direction) : null,
+              lat,
+              lon,
+              vector: Number.isFinite(Number(vehicle.vector)) ? Number(vehicle.vector) : 0,
+              route: String(vehicle.route ?? '').trim(),
+              mtype: String(vehicle.mtype ?? transport).trim(),
+            };
+          })
+          .filter(Boolean)
+      : [];
+
+    return {
+      vehicles,
+      routes: Number(payload?.routes) || 0,
+      errors: Number(payload?.errors) || 0,
+      stale: Boolean(payload?.stale),
+      updatedAt: payload?.updatedAt || null,
+    };
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    if (error?.name === 'AbortError') {
+      throw new ApiError('Превышено время ожидания списка транспорта', { timeout: true });
+    }
+    throw new ApiError('Не удалось получить транспорт с backend', { cause: error });
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export async function getStops() {

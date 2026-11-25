@@ -10,9 +10,12 @@ function buildUrl(path, params = {}) {
   return url;
 }
 
-export async function fetchUpstream(path, params = {}) {
+export async function fetchUpstream(path, params = {}, options = {}) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), config.upstreamTimeoutMs);
+  const timer = setTimeout(
+    () => controller.abort(),
+    options.timeoutMs ?? config.upstreamTimeoutMs,
+  );
 
   try {
     const response = await fetch(buildUrl(path, params), {
@@ -77,8 +80,8 @@ export function fetchVehicles() {
   return fetchUpstream('/api/v1/vehicles');
 }
 
-export function fetchGeoInfoMar(transport, route) {
-  return fetchUpstream('/api/v1/geoinfomar', { transport, route });
+export function fetchGeoInfoMar(transport, route, options = {}) {
+  return fetchUpstream('/api/v1/geoinfomar', { transport, route }, options);
 }
 
 export function fetchRaw(path) {

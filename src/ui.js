@@ -58,7 +58,6 @@ export function init(config) {
   els.routeOptions = document.getElementById('route-options');
   els.showBtn = document.getElementById('show-btn');
   els.showBtnLabel = document.getElementById('show-btn-label');
-  els.stopBtn = document.getElementById('stop-btn');
   els.statusText = document.getElementById('status-text');
   els.statusTime = document.getElementById('last-update');
   els.liveDot = document.getElementById('live-dot');
@@ -103,8 +102,6 @@ function wireEvents() {
     setActiveTransport(type);
     handlers.onTransportChange?.(type);
   });
-
-  els.stopBtn.addEventListener('click', () => handlers.onStop?.());
 
   els.layerToggle.addEventListener('click', (event) => {
     const button = event.target.closest('button[data-layer]');
@@ -231,8 +228,8 @@ export function setLoading(loading) {
   els.showBtnLabel.textContent = loading ? 'Загрузка…' : 'Показать маршрут';
 }
 
-export function setStopEnabled(enabled) {
-  els.stopBtn.disabled = !enabled;
+export function setStatusVehiclesCount(count) {
+  els.vehiclesCount.textContent = `${count} ${pluralize(count, ['машина', 'машины', 'машин'])}`;
 }
 
 export function setStatus({ text, time = null, live = false, error = false }) {

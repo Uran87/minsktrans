@@ -1,0 +1,188 @@
+import { config } from './config.js';
+import { normalizeGeoInfo } from './normalize.js';
+import { fetchGeoInfoMar } from './upstream.js';
+import { mapLimit } from './util.js';
+
+const TRANSPORTS = ['bus', 'trolley', 'tram'];
+const snapshots = new Map();
+const attempts = new Map();
+const cooldowns = new Map();
+let timer = null;
+let ticking = false;
+
+function log(...args) {
+  console.log('[live]', ...args);
+}
+
+async function refreshTransport(db, transport) {
+  if (attempts.has(transport)) return attempts.get(transport);
+
+  const attempt = (async () => {
+    const cooldownUntil = cooldowns.get(transport) || 0;
+    if (Date.now() < cooldownUntil) {
+      return snapshots.get(transport) || emptySnapshot(transport);
+    }
+
+    const routes = db
+      .prepare('SELECT id, mtype, numl FROM routes WHERE active = 1 AND mtype = ? ORDER BY id')
+      .all(transport);
+
+    if (!routes.length) {
+      const snapshot = emptySnapshot(transport);
+      snapshots.set(transport, snapshot);
+      return snapshot;
+    }
+
+    const previous = snapshots.get(transport)?.vehicles || [];
+    const previousByRoute = new Map();
+    for (const vehicle of previous) {
+      if (!previousByRoute.has(vehicle.route)) previousByRoute.set(vehicle.route, []);
+      previousByRoute.get(vehicle.route).push(vehicle);
+    }
+
+    const vehicles = [];
+    const succeeded = new Set();
+    let errors = 0;
+    let successes = 0;
+    let failures = 0;
+    let aborted = false;
+
+    await mapLimit(routes, config.liveConcurrency, async (route) => {
+      if (aborted) {
+        errors += 1;
+        return;
+      }
+
+      try {
+        const payload = await fetchGeoInfoMar(route.mtype, route.numl, {
+          timeoutMs: config.liveRequestTimeoutMs,
+        });
+        const list = normalizeGeoInfo(payload);
+        succeeded.add(route.numl);
+        successes += 1;
+
+        for (const vehicle of list) {
+          vehicles.push({
+            ...vehicle,
+            route: route.numl,
+            routeId: route.id,
+            mtype: route.mtype,
+          });
+        }
+      } catch {
+        errors += 1;
+        failures += 1;
+
+        // Если API массово недоступен, не ждём таймауты по всем маршрутам.
+        if (successes === 0 && failures >= 6) aborted = true;
+      }
+    });
+
+    for (const route of routes) {
+      if (succeeded.has(route.numl)) continue;
+      const stale = previousByRoute.get(route.numl);
+      if (stale) vehicles.push(...stale);
+    }
+
+    const unique = new Map();
+    for (const vehicle of vehicles) unique.set(String(vehicle.vehicleId), vehicle);
+
+    const now = Date.now();
+    const allFailed = errors === routes.length;
+
+    if (allFailed) {
+      cooldowns.set(transport, now + 5 * 60_000);
+    } else {
+      cooldowns.delete(transport);
+    }
+
+    const snapshot = {
+      transport,
+      updatedAt: new Date(now).toISOString(),
+      updatedAtMs: now,
+      routes: routes.length,
+      vehicles: [...unique.values()],
+      errors,
+      stale: errors > 0,
+    };
+
+    snapshots.set(transport, snapshot);
+    return snapshot;
+  })().finally(() => attempts.delete(transport));
+
+  attempts.set(transport, attempt);
+  return attempt;
+}
+
+function emptySnapshot(transport) {
+  const now = Date.now();
+  return {
+    transport,
+    updatedAt: new Date(now).toISOString(),
+    updatedAtMs: now,
+    routes: 0,
+    vehicles: [],
+    errors: 0,
+    stale: false,
+  };
+}
+
+async function tick(db) {
+  if (ticking) return;
+  ticking = true;
+
+  try {
+    for (const transport of TRANSPORTS) {
+      await refreshTransport(db, transport);
+    }
+  } catch (error) {
+    log(error instanceof Error ? error.message : String(error));
+  } finally {
+    ticking = false;
+  }
+}
+
+export function startLivePoller(db) {
+  if (!config.liveEnabled) {
+    log('опрос транспорта отключён (LIVE_ENABLED=false)');
+    return;
+  }
+
+  tick(db).catch(() => {});
+  timer = setInterval(() => {
+    tick(db).catch(() => {});
+  }, config.liveRefreshMs);
+  timer.unref?.();
+
+  log(`опрос всех маршрутов включён, интервал ${config.liveRefreshMs} мс`);
+}
+
+export function stopLivePoller() {
+  if (timer) clearInterval(timer);
+  timer = null;
+}
+
+export function getLiveSnapshot(db, transport) {
+  const snapshot = snapshots.get(transport);
+  const fresh =
+    snapshot &&
+    snapshot.routes > 0 &&
+    Date.now() - snapshot.updatedAtMs < config.liveRefreshMs * 1.5;
+
+  if (fresh) return Promise.resolve(snapshot);
+  return refreshTransport(db, transport);
+}
+
+export function getLiveSummary() {
+  return TRANSPORTS.map((transport) => {
+    const snapshot = snapshots.get(transport);
+    return {
+      transport,
+      vehicles: snapshot?.vehicles.length || 0,
+      routes: snapshot?.routes || 0,
+      errors: snapshot?.errors || 0,
+      stale: snapshot?.stale || false,
+      updatedAt: snapshot?.updatedAt || null,
+    };
+  });
+}

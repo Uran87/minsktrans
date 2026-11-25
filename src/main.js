@@ -23,6 +23,8 @@ const state = {
   stops: new Map(),
   stopsPromise: null,
   vehicles: [],
+  routeVehicles: [],
+  fleetRoutes: 0,
   routeStops: [],
   routeStopIds: [],
   routeGeometry: null,
@@ -30,6 +32,7 @@ const state = {
   polling: false,
   loading: false,
   inFlight: false,
+  pollQueued: false,
   allStopsGeneration: -1,
   lastPollAt: 0,
   pollErrorShown: false,
@@ -147,15 +150,11 @@ async function showRoute() {
   state.routeGeometry = null;
 
   state.loading = true;
-  stopPolling(true);
   ui.setLoading(true);
   ui.setStatus({ text: 'Загружаем маршрут…', live: false });
 
   try {
-    const [stopsMap, vehicles] = await Promise.all([
-      ensureStops(),
-      api.getGeoInfo({ transport, route }),
-    ]);
+    const stopsMap = await ensureStops();
 
     if (
       requestId !== state.requestId ||
@@ -166,10 +165,10 @@ async function showRoute() {
       return;
     }
 
-    state.vehicles = vehicles;
     renderAllStops(stopsMap);
 
-    const orderIds = await resolveRouteOrder(transport, route, vehicles, stopsMap);
+    const routeVehicles = vehiclesForRoute(state.vehicles, route);
+    const orderIds = await resolveRouteOrder(transport, route, routeVehicles, stopsMap);
 
     if (
       requestId !== state.requestId ||
@@ -181,37 +180,23 @@ async function showRoute() {
     }
 
     drawRoute(orderIds);
-    state.vehicles = attachNextStops(vehicles);
-    const preferredDirection = pickVehicleDirection(state.vehicles);
+    state.routeVehicles = attachNextStops(vehiclesForRoute(state.vehicles, route));
+    const preferredDirection = pickVehicleDirection(
+      state.routeVehicles.length ? state.routeVehicles : state.vehicles,
+    );
     applyRouteGeometry(transport, route, generation, requestId, preferredDirection);
     mapView.updateVehicles(state.vehicles, transport);
-    mapView.fitToRoute(state.routeStops, state.vehicles);
-
-    ui.renderVehicles(
-      state.vehicles,
-      transport,
-      state.selectedVehicleId,
-      'На маршруте пока нет машин',
-      { route, stops: state.routeStops },
-    );
+    mapView.fitToRoute(state.routeStops, state.routeVehicles);
+    renderRouteVehicles();
 
     const now = new Date();
     state.lastPollAt = now.getTime();
 
-    ui.setStatus({
-      text:
-        vehicles.length > 0
-          ? `Онлайн · маршрут №${route}`
-          : `Машин на маршруте №${route} нет`,
-      time: now,
-      live: true,
-    });
+    ui.setStatus({ text: fleetStatusText(), time: now, live: true });
 
-    if (vehicles.length > 0 && orderIds.length === 0) {
+    if (routeVehicles.length > 0 && orderIds.length === 0) {
       ui.toast('Линия маршрута не построена: API не вернул порядок остановок.', 'info', 5000);
     }
-
-    startPolling();
   } catch (error) {
     console.error('[showRoute]', error);
     ui.setStatus({ text: 'Ошибка загрузки', live: false, error: true });
@@ -266,6 +251,41 @@ function drawRoute(orderIds, geometry = state.routeGeometry) {
   state.routeStops = orderIds.map((id) => state.stops.get(id)).filter(Boolean);
   state.routeGeometry = geometry;
   mapView.setRoute(state.routeStops, state.transport, geometry);
+}
+
+function vehiclesForRoute(vehicles, route) {
+  const target = String(route ?? '');
+  return vehicles.filter((vehicle) => !vehicle.route || String(vehicle.route) === target);
+}
+
+function renderRouteVehicles() {
+  if (!state.routeStops.length) {
+    ui.renderVehicles([], state.transport, null, 'Нажмите «Показать маршрут»');
+  } else {
+    ui.renderVehicles(
+      state.routeVehicles,
+      state.transport,
+      state.selectedVehicleId,
+      'На маршруте пока нет машин',
+      { route: state.route, stops: state.routeStops },
+    );
+  }
+
+  ui.setStatusVehiclesCount(
+    state.routeStops.length ? state.routeVehicles.length : state.vehicles.length,
+  );
+}
+
+function fleetStatusText() {
+  if (!state.routeStops.length) {
+    return state.vehicles.length > 0
+      ? `Онлайн · ${state.vehicles.length} машин на карте`
+      : 'Машин на карте нет';
+  }
+
+  return state.routeVehicles.length > 0
+    ? `Онлайн · маршрут №${state.route} · ${state.routeVehicles.length} машин`
+    : `Машин на маршруте №${state.route} нет`;
 }
 
 /**
@@ -392,7 +412,6 @@ function attachNextStops(vehicles) {
 function startPolling() {
   stopPolling(true);
   state.polling = true;
-  ui.setStopEnabled(true);
 
   state.timer = setInterval(() => {
     if (document.hidden) return;
@@ -406,52 +425,58 @@ function stopPolling(silent = false) {
     state.timer = null;
   }
   state.polling = false;
-  ui.setStopEnabled(false);
-
-  if (!silent) {
-    ui.setStatus({ text: 'Обновление остановлено', live: false });
-  }
 }
 
 async function pollOnce() {
-  if (!state.polling || state.inFlight) return;
+  if (!state.polling) return;
+  if (state.inFlight) {
+    state.pollQueued = true;
+    return;
+  }
 
   const transport = state.transport;
-  const route = state.route;
   const generation = state.dataGeneration;
 
   state.inFlight = true;
 
   try {
-    const vehicles = await api.getGeoInfo({ transport, route });
+    const fleet = await api.getAllVehicles({ transport });
 
-    if (
-      generation !== state.dataGeneration ||
-      transport !== state.transport ||
-      route !== state.route
-    ) {
+    if (generation !== state.dataGeneration || transport !== state.transport) {
       return;
     }
 
-    state.vehicles = attachNextStops(vehicles);
-    mapView.updateVehicles(state.vehicles, transport);
+    let vehicles = fleet.vehicles;
 
-    ui.renderVehicles(
-      state.vehicles,
-      transport,
-      state.selectedVehicleId,
-      'На маршруте пока нет машин',
-      { route, stops: state.routeStops },
-    );
+    // Пока каталог маршрутов на backend пуст, сохраняем работоспособность:
+    // показываем хотя бы выбранный маршрут через /geoinfomar.
+    if (!vehicles.length && fleet.routes === 0 && state.route) {
+      const fallback = await api.getGeoInfo({ transport, route: state.route });
+      vehicles = fallback.map((vehicle) => ({
+        ...vehicle,
+        route: state.route,
+        mtype: transport,
+      }));
+
+      if (generation !== state.dataGeneration || transport !== state.transport) {
+        return;
+      }
+    }
+
+    state.vehicles = vehicles;
+    state.fleetRoutes = fleet.routes;
+    state.routeVehicles = state.routeStops.length
+      ? attachNextStops(vehiclesForRoute(vehicles, state.route))
+      : [];
+
+    mapView.updateVehicles(state.vehicles, transport);
+    renderRouteVehicles();
 
     state.lastPollAt = Date.now();
     state.pollErrorShown = false;
 
     ui.setStatus({
-      text:
-        vehicles.length > 0
-          ? `Онлайн · маршрут №${route}`
-          : `Машин на маршруте №${route} нет`,
+      text: fleetStatusText(),
       time: new Date(),
       live: true,
     });
@@ -470,6 +495,10 @@ async function pollOnce() {
     }
   } finally {
     state.inFlight = false;
+    if (state.pollQueued && state.polling) {
+      state.pollQueued = false;
+      pollOnce();
+    }
   }
 }
 
@@ -574,13 +603,7 @@ function selectVehicle(vehicleId, focus, transportHint = null) {
   state.selectedVehicleId = String(vehicleId);
   mapView.setSelectedVehicle(vehicleId);
 
-  ui.renderVehicles(
-    state.vehicles,
-    state.transport,
-    state.selectedVehicleId,
-    state.routeStops.length ? 'На маршруте пока нет машин' : null,
-    { route: state.route, stops: state.routeStops },
-  );
+  renderRouteVehicles();
 
   if (focus) mapView.focusVehicle(vehicleId);
   openDetails(vehicleId, transportHint);
@@ -593,13 +616,7 @@ function closeDetails() {
 
   ui.closeDetails();
   mapView.clearSelection();
-  ui.renderVehicles(
-    state.vehicles,
-    state.transport,
-    null,
-    state.routeStops.length ? 'На маршруте пока нет машин' : null,
-    { route: state.route, stops: state.routeStops },
-  );
+  renderRouteVehicles();
 }
 
 /* ------------------------------------------------------------------ */
@@ -690,6 +707,8 @@ function handleSubmit({ transport, route }) {
 
 function handleTransportChange(type) {
   if (!TRANSPORT_TYPES.includes(type)) return;
+
+  const hadRoute = state.routeStops.length > 0 || state.loading;
   state.transport = type;
   savePrefs({ transport: type });
   loadRouteOptions(type);
@@ -697,26 +716,22 @@ function handleTransportChange(type) {
   closeStopPopup();
   if (ui.isDetailsOpen()) closeDetails();
 
-  if (state.polling || state.loading) {
+  state.vehicles = [];
+  state.routeVehicles = [];
+  state.routeGeometry = null;
+  state.fleetRoutes = 0;
+  mapView.clearVehicles();
+
+  if (hadRoute) {
     showRoute();
-    return;
+  } else {
+    state.routeStops = [];
+    state.routeStopIds = [];
+    mapView.clearRoute();
+    renderRouteVehicles();
   }
 
-  if (state.routeStops.length > 0) {
-    mapView.setRoute(state.routeStops, type, state.routeGeometry);
-  }
-
-  if (state.vehicles.length > 0) {
-    mapView.updateVehicles(state.vehicles, type);
-  }
-
-  ui.renderVehicles(
-    state.vehicles,
-    type,
-    state.selectedVehicleId,
-    state.routeStops.length ? 'На маршруте пока нет машин' : null,
-    { route: state.route, stops: state.routeStops },
-  );
+  pollOnce();
 }
 
 function handleLayerChange(layer) {
@@ -732,6 +747,8 @@ function resetData() {
   state.stops = new Map();
   state.stopsPromise = null;
   state.vehicles = [];
+  state.routeVehicles = [];
+  state.fleetRoutes = 0;
   state.routeStops = [];
   state.routeStopIds = [];
   state.routeGeometry = null;
@@ -752,8 +769,7 @@ function resetData() {
 }
 
 function handleMockChange(enabled) {
-  const wasPolling = state.polling;
-  const wasLoading = state.loading;
+  const hadRoute = state.routeStops.length > 0 || state.loading;
   stopPolling(true);
   api.setMockEnabled(enabled);
   savePrefs({ mock: enabled });
@@ -775,12 +791,11 @@ function handleMockChange(enabled) {
     4500,
   );
 
-  if (wasPolling || wasLoading) showRoute();
-  else loadAllStops();
-}
+  startPolling();
+  pollOnce();
 
-function handleStop() {
-  stopPolling();
+  if (hadRoute) showRoute();
+  else loadAllStops();
 }
 
 /* ------------------------------------------------------------------ */
@@ -821,7 +836,6 @@ ui.init({
   apiBase: api.getApiBase(),
   handlers: {
     onSubmit: handleSubmit,
-    onStop: handleStop,
     onTransportChange: handleTransportChange,
     onLayerChange: handleLayerChange,
     onMockChange: handleMockChange,
@@ -843,6 +857,8 @@ mapView.initMap('map', {
 });
 mapView.setBaseLayer(prefs.layer);
 
+startPolling();
+pollOnce();
 loadRouteOptions(prefs.transport);
 loadAllStops();
 

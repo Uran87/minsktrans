@@ -19,6 +19,10 @@ export const config = {
   apiPort: numeric(process.env.API_PORT, 3000),
   upstreamTimeoutMs: numeric(process.env.UPSTREAM_TIMEOUT_MS, 25_000),
   liveCacheMs: numeric(process.env.LIVE_CACHE_MS, 8_000),
+  liveEnabled: boolean(process.env.LIVE_ENABLED, true),
+  liveRefreshMs: numeric(process.env.LIVE_REFRESH_MS, 30_000),
+  liveConcurrency: numeric(process.env.LIVE_CONCURRENCY, 8),
+  liveRequestTimeoutMs: numeric(process.env.LIVE_REQUEST_TIMEOUT_MS, 8_000),
 
   // Импорт справочников.
   syncConcurrency: numeric(process.env.SYNC_CONCURRENCY, 4),
