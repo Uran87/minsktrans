@@ -91,7 +91,7 @@ function createVehicleStyle(color, selected, vector = 0) {
 
 /**
  * Знак остановки: табличка с автобусом на ножке.
- * Размер 18×22 px ≈ 0,5 см по ширине при 96 dpi.
+ * Размер 18×15 px ≈ 0,5 см по ширине при 96 dpi.
  * Для остановок маршрута иконка увеличивается через scale.
  */
 function stopSignSvg(color = null) {
@@ -100,8 +100,7 @@ function stopSignSvg(color = null) {
   const glyph = '#0b1220';
   const windowFill = color || '#f8fafc';
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="22" viewBox="0 0 18 22">
-    <rect x="8.2" y="11.5" width="1.6" height="10" rx="0.8" fill="#0b1220"/>
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="15" viewBox="0 0 18 15">
     <rect x="0.8" y="0.8" width="16.4" height="13" rx="2.8"
           fill="${signFill}" stroke="${signStroke}" stroke-width="1.6"/>
     <rect x="3.6" y="3.8" width="10.8" height="7" rx="1.4" fill="${glyph}"/>
