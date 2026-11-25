@@ -25,6 +25,7 @@ const state = {
   vehicles: [],
   routeStops: [],
   routeStopIds: [],
+  routeGeometry: null,
   timer: null,
   polling: false,
   loading: false,
@@ -143,6 +144,7 @@ async function showRoute() {
 
   const requestId = ++state.requestId;
   const generation = state.dataGeneration;
+  state.routeGeometry = null;
 
   state.loading = true;
   stopPolling(true);
@@ -180,6 +182,8 @@ async function showRoute() {
 
     drawRoute(orderIds);
     state.vehicles = attachNextStops(vehicles);
+    const preferredDirection = pickVehicleDirection(state.vehicles);
+    applyRouteGeometry(transport, route, generation, requestId, preferredDirection);
     mapView.updateVehicles(state.vehicles, transport);
     mapView.fitToRoute(state.routeStops, state.vehicles);
 
@@ -257,10 +261,63 @@ async function resolveRouteOrder(transport, route, vehicles, stopsMap) {
   return [];
 }
 
-function drawRoute(orderIds) {
+function drawRoute(orderIds, geometry = state.routeGeometry) {
   state.routeStopIds = orderIds;
   state.routeStops = orderIds.map((id) => state.stops.get(id)).filter(Boolean);
-  mapView.setRoute(state.routeStops, state.transport);
+  state.routeGeometry = geometry;
+  mapView.setRoute(state.routeStops, state.transport, geometry);
+}
+
+/**
+ * Подтягивает сохранённую геометрию маршрута из backend и заменяет
+ * резервную линию по остановкам. Если геометрии нет — остаётся линия
+ * «остановка → остановка».
+ */
+function pickVehicleDirection(vehicles) {
+  const counts = new Map();
+
+  for (const vehicle of vehicles) {
+    const direction = Number(vehicle.direction);
+    if (!Number.isFinite(direction)) continue;
+    counts.set(direction, (counts.get(direction) || 0) + 1);
+  }
+
+  let bestDirection = null;
+  let bestCount = 0;
+  for (const [direction, count] of counts) {
+    if (count > bestCount) {
+      bestCount = count;
+      bestDirection = direction;
+    }
+  }
+
+  return bestDirection;
+}
+
+async function applyRouteGeometry(transport, route, generation, requestId, direction = null) {
+  try {
+    let data = await api.getRouteGeometry({ transport, route, direction });
+    if (!data && direction !== null) {
+      data = await api.getRouteGeometry({ transport, route });
+    }
+    if (!data) return;
+
+    if (
+      generation !== state.dataGeneration ||
+      requestId !== state.requestId ||
+      transport !== state.transport ||
+      route !== state.route
+    ) {
+      return;
+    }
+
+    state.routeGeometry = data.geometry;
+    if (state.routeStops.length > 0) {
+      mapView.setRoute(state.routeStops, state.transport, state.routeGeometry);
+    }
+  } catch (error) {
+    console.warn('[routeGeometry]', error);
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -645,7 +702,7 @@ function handleTransportChange(type) {
   }
 
   if (state.routeStops.length > 0) {
-    mapView.setRoute(state.routeStops, type);
+    mapView.setRoute(state.routeStops, type, state.routeGeometry);
   }
 
   if (state.vehicles.length > 0) {
@@ -676,6 +733,7 @@ function resetData() {
   state.vehicles = [];
   state.routeStops = [];
   state.routeStopIds = [];
+  state.routeGeometry = null;
   state.loading = false;
   state.allStopsGeneration = -1;
   state.selectedVehicleId = null;

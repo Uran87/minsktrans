@@ -5,7 +5,7 @@ export default defineConfig(({ mode }) => {
   // В dev-режиме запросы к /api проксируются на реальный API,
   // поэтому браузер не упирается в CORS.
   const apiTarget =
-    env.VITE_DEV_API_TARGET || process.env.VITE_DEV_API_TARGET || 'http://194.158.195.62:41290';
+    env.VITE_DEV_API_TARGET || process.env.VITE_DEV_API_TARGET || 'http://localhost:3000';
 
   return {
     server: {

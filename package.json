@@ -7,7 +7,12 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
-    "preview": "vite preview --host 0.0.0.0"
+    "preview": "vite preview --host 0.0.0.0",
+    "server": "node --env-file-if-exists=.env server/index.js",
+    "worker": "node --env-file-if-exists=.env server/cli.js",
+    "sync": "node --env-file-if-exists=.env server/cli.js bootstrap",
+    "status": "node --env-file-if-exists=.env server/cli.js status",
+    "seed:dev": "node server/dev-seed.js"
   },
   "engines": {
     "node": ">=20.19.0"

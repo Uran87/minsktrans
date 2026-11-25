@@ -11,7 +11,9 @@
 import * as mockApi from './mock.js';
 
 const API_BASE = (import.meta.env.VITE_API_BASE || '/api/v1').replace(/\/+$/, '');
+const LOCAL_API_BASE = (import.meta.env.VITE_LOCAL_API_BASE || '/api').replace(/\/+$/, '');
 const REQUEST_TIMEOUT = 25_000;
+const LOCAL_REQUEST_TIMEOUT = 4_000;
 
 const envMockDefault = import.meta.env.VITE_MOCK_DEFAULT;
 let mockEnabled =
@@ -464,4 +466,46 @@ export async function getScoreboard(stopId) {
     : await fetchJson('/scoreboard', { idStop: stopId, txt: 'false' });
 
   return normalizeScoreboard(raw);
+}
+
+/**
+ * Геометрия маршрута из собственного хранилища (backend + SQLite).
+ * Если backend недоступен или линии ещё нет — возвращаем null,
+ * чтобы карта нарисовала резервную линию по остановкам.
+ */
+export async function getRouteGeometry({ transport, route, direction = null }) {
+  if (mockEnabled) return null;
+
+  const params = new URLSearchParams({ transport: String(transport), route: String(route) });
+  if (direction !== null && direction !== undefined) params.set('direction', String(direction));
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), LOCAL_REQUEST_TIMEOUT);
+
+  try {
+    const response = await fetch(`${LOCAL_API_BASE}/route-geometry?${params.toString()}`, {
+      headers: { Accept: 'application/json' },
+      signal: controller.signal,
+      cache: 'no-store',
+    });
+
+    if (response.status === 404) return null;
+    if (!response.ok) return null;
+
+    const payload = await response.json();
+    if (!Array.isArray(payload?.geometry) || payload.geometry.length < 2) return null;
+
+    return {
+      geometry: payload.geometry,
+      source: payload.source || 'stored',
+      status: payload.status || 'unknown',
+      direction: payload.variant?.direction ?? null,
+      updatedAt: payload.updatedAt || null,
+    };
+  } catch (error) {
+    console.warn('[routeGeometry]', error);
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
 }

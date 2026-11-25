@@ -24,7 +24,30 @@ ENV VITE_API_BASE=$VITE_API_BASE \
 RUN npm run build
 
 # ---------------------------------------------------------------------------
-# 2. Раздача статики + reverse-proxy к API (обходим CORS)
+# 2. API и фоновые задачи (SQLite + сбор GPS + построение геометрии)
+# ---------------------------------------------------------------------------
+FROM node:22-alpine AS api
+
+WORKDIR /app
+
+COPY package.json ./
+COPY server ./server
+
+ENV NODE_ENV=production \
+    API_PORT=3000 \
+    DATA_DIR=/data
+
+RUN mkdir -p /data
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:3000/api/health >/dev/null 2>&1 || exit 1
+
+CMD ["node", "server/index.js"]
+
+# ---------------------------------------------------------------------------
+# 3. Раздача статики + reverse-proxy к API (обходим CORS)
 # ---------------------------------------------------------------------------
 FROM nginx:1.27-alpine AS runtime
 

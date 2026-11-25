@@ -398,7 +398,7 @@ export function clearAllStops() {
 /* Маршрут                                                             */
 /* ------------------------------------------------------------------ */
 
-export function setRoute(stops, transport) {
+export function setRoute(stops, transport, geometryLine = null) {
   if (!routeSource) return;
 
   const type = normalizeTransportType(transport) || transport;
@@ -408,12 +408,22 @@ export function setRoute(stops, transport) {
   stopLabelsVisible = (map?.getView().getZoom() ?? 12) >= 14.2;
 
   const coordinates = [];
-  for (const stop of stops) {
-    const coordinate = fromLonLat([stop.lon, stop.lat]);
+  const addCoordinate = (lon, lat) => {
+    if (!Number.isFinite(lon) || !Number.isFinite(lat)) return;
+    const coordinate = fromLonLat([lon, lat]);
     const previous = coordinates[coordinates.length - 1];
     if (!previous || previous[0] !== coordinate[0] || previous[1] !== coordinate[1]) {
       coordinates.push(coordinate);
     }
+  };
+
+  if (Array.isArray(geometryLine) && geometryLine.length >= 2) {
+    for (const point of geometryLine) {
+      if (Array.isArray(point)) addCoordinate(Number(point[0]), Number(point[1]));
+      else addCoordinate(Number(point?.lon), Number(point?.lat));
+    }
+  } else {
+    for (const stop of stops) addCoordinate(stop.lon, stop.lat);
   }
 
   if (coordinates.length > 1) {

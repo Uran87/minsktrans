@@ -1,11 +1,37 @@
 name: minsktrans
 
 services:
+  api:
+    build:
+      context: .
+      target: api
+    image: minsktrans-api:latest
+    container_name: minsktrans-api
+    environment:
+      # Внешний REST API СНОиПД. Backend проксирует /api/v1/* без сохранения.
+      API_ORIGIN: ${API_ORIGIN:-http://194.158.195.62:41290}
+      DATA_DIR: /data
+      JOBS_ENABLED: ${JOBS_ENABLED:-true}
+      AUTO_BOOTSTRAP: ${AUTO_BOOTSTRAP:-true}
+      TRACE_INTERVAL_MS: ${TRACE_INTERVAL_MS:-60000}
+      TRACE_FOCUS_SIZE: ${TRACE_FOCUS_SIZE:-8}
+      TRACE_FOCUS_HOURS: ${TRACE_FOCUS_HOURS:-6}
+      TRACE_RETENTION_DAYS: ${TRACE_RETENTION_DAYS:-14}
+    volumes:
+      - minsktrans-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
   web:
     build:
       context: .
       args:
-        # База API на стороне браузера. Nginx проксирует её на API_ORIGIN.
+        # База API на стороне браузера. Nginx проксирует её на backend.
         VITE_API_BASE: ${VITE_API_BASE:-/api/v1}
         # true — при первом запуске включён демо-режим (маршрут №1 без API).
         # Переключатель «Демо-данные» в интерфейсе меняет режим на лету.
@@ -14,7 +40,10 @@ services:
     container_name: minsktrans-live
     ports:
       - "${APP_PORT:-8080}:80"
-    environment:
-      # Адрес REST API СНОиПД (без завершающего слэша).
-      API_ORIGIN: ${API_ORIGIN:-http://194.158.195.62:41290}
+    depends_on:
+      api:
+        condition: service_healthy
     restart: unless-stopped
+
+volumes:
+  minsktrans-data:
