@@ -260,7 +260,8 @@ export function setSidebarOpen(open) {
 export function showDetailsLoading(vehicleId, transport) {
   const type = normalizeTransportType(transport) || 'bus';
   els.details.hidden = false;
-  els.detailsKicker.textContent = `${TRANSPORT_LABELS[type] || 'Транспорт'} · борт ${vehicleId}`;
+  els.detailsKicker.textContent = TRANSPORT_LABELS[type] || 'Транспорт';
+  els.detailsTitle.hidden = false;
   els.detailsTitle.textContent = 'Загрузка…';
   els.detailsBody.innerHTML = `
     <div class="skeleton-meta">
@@ -286,13 +287,13 @@ export function renderDetails({
     normalizeTransportType(vehicle.tsType) || normalizeTransportType(transport) || normalizeTransportType(fallbackTransport) || 'bus';
 
   const routeNumber = vehicle.marNuml || vehicle.marNum || '—';
-  const title = `Борт ${vehicle.vehicleId}`;
   const tripNumber = trip?.tripNum ?? vehicle.tripNum ?? vehicle.tripId ?? null;
   const lastStopId = Number(vehicle.lastStopId);
 
   els.details.hidden = false;
   els.detailsKicker.textContent = `${TRANSPORT_LABELS[type] || 'Транспорт'} · маршрут №${routeNumber}`;
-  els.detailsTitle.textContent = title;
+  els.detailsTitle.hidden = true;
+  els.detailsTitle.textContent = '';
 
   const metaItems = [
     ['Модель', vehicle.model || vehicle.tsTypeAdd || '—'],
@@ -409,7 +410,8 @@ function centerNextStop() {
 
 export function renderDetailsError(vehicleId, error) {
   els.details.hidden = false;
-  els.detailsKicker.textContent = `Борт ${vehicleId}`;
+  els.detailsKicker.textContent = 'Транспорт';
+  els.detailsTitle.hidden = false;
   els.detailsTitle.textContent = 'Не удалось загрузить';
   els.detailsBody.innerHTML = `
     <p class="warn">${esc(error?.message || 'Неизвестная ошибка')}</p>
@@ -419,7 +421,8 @@ export function renderDetailsError(vehicleId, error) {
 export function closeDetails() {
   els.details.hidden = true;
   els.detailsBody.innerHTML = '';
-  els.detailsTitle.textContent = '—';
+  els.detailsTitle.textContent = '';
+  els.detailsTitle.hidden = false;
   els.detailsKicker.textContent = 'Транспорт';
 }
 
