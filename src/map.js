@@ -51,7 +51,7 @@ let routeLineFeature = null;
 
 const FAR_CLUSTER_DISTANCE_METERS = 1000;
 const NEAR_CLUSTER_DISTANCE_METERS = 200;
-const NEAR_CLUSTER_MIN_ZOOM = 11;
+const NEAR_CLUSTER_MIN_ZOOM = 13;
 const LABEL_MIN_ZOOM = 17;
 
 /** vehicleId -> { feature, style, icon, color, selected } */
