@@ -509,3 +509,52 @@ export async function getRouteGeometry({ transport, route, direction = null }) {
     clearTimeout(timer);
   }
 }
+
+/**
+ * Список маршрутов из backend для подсказок в поле номера.
+ */
+export async function getRouteList({ transport } = {}) {
+  const params = new URLSearchParams();
+  if (transport) params.set('transport', String(transport));
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), LOCAL_REQUEST_TIMEOUT);
+
+  try {
+    const response = await fetch(`${LOCAL_API_BASE}/routes?${params.toString()}`, {
+      headers: { Accept: 'application/json' },
+      signal: controller.signal,
+      cache: 'no-store',
+    });
+
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const payload = await response.json();
+    const routes = Array.isArray(payload?.routes) ? payload.routes : [];
+
+    const result = [];
+    const seen = new Set();
+
+    for (const route of routes) {
+      const numl = String(route.numl ?? '').trim();
+      if (!numl || seen.has(numl)) continue;
+      seen.add(numl);
+      result.push({
+        numl,
+        name: String(route.name ?? '').trim(),
+        mtype: route.mtype || transport || '',
+      });
+    }
+
+    if (result.length) return result;
+  } catch (error) {
+    console.warn('[routeList]', error);
+  } finally {
+    clearTimeout(timer);
+  }
+
+  if (mockEnabled) {
+    return [{ numl: '1', name: 'Демо-маршрут №1', mtype: transport || 'bus' }];
+  }
+
+  return [];
+}

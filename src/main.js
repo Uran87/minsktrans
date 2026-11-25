@@ -692,6 +692,7 @@ function handleTransportChange(type) {
   if (!TRANSPORT_TYPES.includes(type)) return;
   state.transport = type;
   savePrefs({ transport: type });
+  loadRouteOptions(type);
 
   closeStopPopup();
   if (ui.isDetailsOpen()) closeDetails();
@@ -757,6 +758,8 @@ function handleMockChange(enabled) {
   api.setMockEnabled(enabled);
   savePrefs({ mock: enabled });
   resetData();
+  routeOptionsCache.clear();
+  loadRouteOptions(state.transport, true);
 
   ui.setMockChecked(enabled);
   ui.setStatus({
@@ -778,6 +781,28 @@ function handleMockChange(enabled) {
 
 function handleStop() {
   stopPolling();
+}
+
+/* ------------------------------------------------------------------ */
+/* Подсказки номеров маршрутов                                         */
+/* ------------------------------------------------------------------ */
+
+const routeOptionsCache = new Map();
+
+async function loadRouteOptions(transport, force = false) {
+  const cached = routeOptionsCache.get(transport);
+  if (!force && cached && Date.now() - cached.at < 60_000) {
+    if (transport === state.transport) ui.renderRouteOptions(cached.routes);
+    return;
+  }
+
+  try {
+    const routes = await api.getRouteList({ transport });
+    routeOptionsCache.set(transport, { at: Date.now(), routes });
+    if (transport === state.transport) ui.renderRouteOptions(routes);
+  } catch (error) {
+    console.warn('[routeOptions]', error);
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -818,6 +843,7 @@ mapView.initMap('map', {
 });
 mapView.setBaseLayer(prefs.layer);
 
+loadRouteOptions(prefs.transport);
 loadAllStops();
 
 ui.setStatus({

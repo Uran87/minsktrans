@@ -55,6 +55,7 @@ export function init(config) {
   els.form = document.getElementById('route-form');
   els.transportToggle = document.getElementById('transport-toggle');
   els.routeInput = document.getElementById('route-input');
+  els.routeOptions = document.getElementById('route-options');
   els.showBtn = document.getElementById('show-btn');
   els.showBtnLabel = document.getElementById('show-btn-label');
   els.stopBtn = document.getElementById('stop-btn');
@@ -199,6 +200,24 @@ export function setActiveLayer(layer) {
   els.layerToggle.querySelectorAll('button[data-layer]').forEach((button) => {
     button.classList.toggle('is-active', button.dataset.layer === layer);
   });
+}
+
+export function renderRouteOptions(routes = []) {
+  if (!els.routeOptions) return;
+
+  const sorted = [...routes].sort((a, b) => {
+    const aNum = Number.parseInt(a.numl, 10);
+    const bNum = Number.parseInt(b.numl, 10);
+    if (Number.isFinite(aNum) && Number.isFinite(bNum) && aNum !== bNum) return aNum - bNum;
+    return String(a.numl).localeCompare(String(b.numl), 'ru');
+  });
+
+  els.routeOptions.innerHTML = sorted
+    .map((route) => {
+      const label = route.name ? `Маршрут №${route.numl} · ${route.name}` : `Маршрут №${route.numl}`;
+      return `<option value="${esc(route.numl)}" label="${esc(label)}"></option>`;
+    })
+    .join('');
 }
 
 export function setMockChecked(checked) {
