@@ -286,10 +286,9 @@ export function renderDetails({
     normalizeTransportType(vehicle.tsType) || normalizeTransportType(transport) || normalizeTransportType(fallbackTransport) || 'bus';
 
   const routeNumber = vehicle.marNuml || vehicle.marNum || '—';
-  const title = vehicle.gosnum || `Борт ${vehicle.vehicleId}`;
+  const title = `Борт ${vehicle.vehicleId}`;
   const tripNumber = trip?.tripNum ?? vehicle.tripNum ?? vehicle.tripId ?? null;
   const lastStopId = Number(vehicle.lastStopId);
-  const lastStop = stops.get(lastStopId);
 
   els.details.hidden = false;
   els.detailsKicker.textContent = `${TRANSPORT_LABELS[type] || 'Транспорт'} · маршрут №${routeNumber}`;
@@ -297,10 +296,8 @@ export function renderDetails({
 
   const metaItems = [
     ['Модель', vehicle.model || vehicle.tsTypeAdd || '—'],
-    ['Маршрут', routeNumber],
     ['Рейс', tripNumber !== null && tripNumber !== '' ? tripNumber : '—'],
     ['Направление', directionLabel(vehicle.direction)],
-    ['Последняя остановка', lastStop?.name || '—'],
     ['Госномер', vehicle.gosnum || '—'],
   ];
 
@@ -368,7 +365,15 @@ export function renderDetails({
       <span>${trip ? `${trip.stops.length} ${pluralize(trip.stops.length, ['остановка', 'остановки', 'остановок'])}` : 'нет данных'}</span>
     </div>
     ${stopsNote}
-    ${rows ? `<div class="stop-scroll"><ol class="stop-list">${rows}</ol></div>` : ''}
+    ${
+      rows
+        ? `<div class="stop-scroll">
+             <div class="stop-spacer" aria-hidden="true"></div>
+             <ol class="stop-list">${rows}</ol>
+             <div class="stop-spacer" aria-hidden="true"></div>
+           </div>`
+        : ''
+    }
   `;
 
   centerNextStop();
@@ -376,7 +381,8 @@ export function renderDetails({
 
 /**
  * Прокручивает список остановок так, чтобы следующая остановка была
- * в середине видимой области (насколько позволяет высота списка).
+ * ровно в середине видимой области. Верхний и нижний отступы-распорки
+ * позволяют центрировать даже первую/последнюю остановку.
  */
 function centerNextStop() {
   const scroller = els.detailsBody.querySelector('.stop-scroll');
@@ -384,6 +390,12 @@ function centerNextStop() {
   if (!scroller || !target) return;
 
   const align = () => {
+    const targetHeight = target.getBoundingClientRect().height || 30;
+    const spacerHeight = Math.max(0, (scroller.clientHeight - targetHeight) / 2);
+    scroller.querySelectorAll('.stop-spacer').forEach((spacer) => {
+      spacer.style.height = `${spacerHeight}px`;
+    });
+
     const scrollerRect = scroller.getBoundingClientRect();
     const targetRect = target.getBoundingClientRect();
     const delta =

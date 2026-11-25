@@ -494,7 +494,7 @@ async function openDetails(vehicleId) {
     const trip = pickTrip(schedule?.trips || [], vehicle);
 
     ui.renderDetails({
-      vehicle,
+      vehicle: { ...vehicle, vehicleId },
       trip,
       stops: state.stops,
       transport,

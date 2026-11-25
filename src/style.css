@@ -841,7 +841,7 @@ button:focus-visible {
   display: block;
   overflow: hidden;
   color: var(--accent);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.09em;
   text-overflow: ellipsis;
@@ -952,6 +952,10 @@ button:focus-visible {
 
 .stop-scroll:hover {
   border-color: var(--border-strong);
+}
+
+.stop-spacer {
+  height: 0;
 }
 
 .stop-scroll::-webkit-scrollbar-thumb {
