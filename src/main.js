@@ -894,6 +894,7 @@ ui.init({
   apiBase: api.getApiBase(),
   handlers: {
     onSubmit: handleSubmit,
+    onRouteSelect: handleSubmit,
     onTransportChange: handleTransportChange,
     onLayerChange: handleLayerChange,
     onMockChange: handleMockChange,

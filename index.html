@@ -58,9 +58,9 @@
             </div>
           </div>
 
-          <label class="field" for="route-input">
-            <span class="field-label">Номер маршрута</span>
-            <span class="input-wrap">
+          <div class="field">
+            <label class="field-label" for="route-input">Номер маршрута</label>
+            <div class="input-wrap">
               <span class="input-prefix" aria-hidden="true">№</span>
               <input
                 id="route-input"
@@ -71,20 +71,15 @@
                 placeholder="1"
                 spellcheck="false"
                 enterkeyhint="go"
-                list="route-options"
+                role="combobox"
+                aria-autocomplete="list"
+                aria-expanded="false"
+                aria-controls="route-menu"
               />
-              <datalist id="route-options"></datalist>
-            </span>
-          </label>
-
-          <div class="actions">
-            <button id="show-btn" type="submit" class="btn btn-primary">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-              <span id="show-btn-label">Показать маршрут</span>
-            </button>
+              <ul id="route-menu" class="route-menu" role="listbox" aria-label="Маршруты" hidden></ul>
+            </div>
           </div>
+
         </form>
 
         <section class="status-card" aria-live="polite">

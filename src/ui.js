@@ -20,6 +20,10 @@ import {
 const els = {};
 let handlers = {};
 let currentTransport = 'bus';
+let routeOptions = [];
+let routeFiltered = [];
+let routeActiveIndex = -1;
+let routeMenuShowAll = true;
 
 /* ------------------------------------------------------------------ */
 /* Утилиты                                                             */
@@ -55,9 +59,7 @@ export function init(config) {
   els.form = document.getElementById('route-form');
   els.transportToggle = document.getElementById('transport-toggle');
   els.routeInput = document.getElementById('route-input');
-  els.routeOptions = document.getElementById('route-options');
-  els.showBtn = document.getElementById('show-btn');
-  els.showBtnLabel = document.getElementById('show-btn-label');
+  els.routeMenu = document.getElementById('route-menu');
   els.statusText = document.getElementById('status-text');
   els.statusTime = document.getElementById('last-update');
   els.liveDot = document.getElementById('live-dot');
@@ -91,7 +93,59 @@ function wireEvents() {
   els.form.addEventListener('submit', (event) => {
     event.preventDefault();
     const route = els.routeInput.value.trim();
+    closeRouteMenu();
     handlers.onSubmit?.({ transport: currentTransport, route });
+  });
+
+  els.routeInput.addEventListener('focus', () => openRouteMenu(true));
+  els.routeInput.addEventListener('click', () => openRouteMenu(true));
+
+  els.routeInput.addEventListener('input', () => {
+    routeMenuShowAll = false;
+    routeActiveIndex = 0;
+    renderRouteMenu();
+  });
+
+  els.routeInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      closeRouteMenu();
+      return;
+    }
+
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      if (els.routeMenu.hidden) openRouteMenu(false);
+      if (!routeFiltered.length) return;
+
+      const direction = event.key === 'ArrowDown' ? 1 : -1;
+      routeActiveIndex = (routeActiveIndex + direction + routeFiltered.length) % routeFiltered.length;
+      renderRouteMenu();
+      return;
+    }
+
+    if (event.key === 'Enter' && !els.routeMenu.hidden) {
+      if (routeActiveIndex >= 0 && routeFiltered[routeActiveIndex]) {
+        event.preventDefault();
+        chooseRoute(routeFiltered[routeActiveIndex].numl);
+      }
+    }
+  });
+
+  els.routeMenu.addEventListener('mousedown', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  });
+  els.routeMenu.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const option = event.target.closest('[data-route]');
+    if (option) chooseRoute(option.dataset.route);
+  });
+
+  els.routeInput.addEventListener('blur', () => {
+    window.setTimeout(() => {
+      if (!els.routeMenu.contains(document.activeElement)) closeRouteMenu();
+    }, 120);
   });
 
   els.transportToggle.addEventListener('click', (event) => {
@@ -177,6 +231,7 @@ function wireEvents() {
 export function setActiveTransport(type) {
   const safeType = TRANSPORT_TYPES.includes(type) ? type : 'bus';
   currentTransport = safeType;
+  closeRouteMenu();
 
   const color = TRANSPORT_COLORS[safeType];
   document.documentElement.style.setProperty('--accent', color);
@@ -196,6 +251,7 @@ export function getTransport() {
 
 export function setRouteValue(route) {
   els.routeInput.value = route || '';
+  closeRouteMenu();
 }
 
 export function setActiveLayer(layer) {
@@ -204,22 +260,86 @@ export function setActiveLayer(layer) {
   });
 }
 
+function sortedRoutes(routes) {
+  return [...routes].sort((a, b) =>
+    String(a.numl).localeCompare(String(b.numl), 'ru', {
+      numeric: true,
+      sensitivity: 'base',
+    }),
+  );
+}
+
+function filterRoutes() {
+  const query = routeMenuShowAll ? '' : els.routeInput.value.trim().toLowerCase();
+  if (!query) return routeOptions;
+  return routeOptions.filter((route) => String(route.numl).toLowerCase().startsWith(query));
+}
+
+function renderRouteMenu() {
+  if (!els.routeMenu) return;
+
+  routeFiltered = filterRoutes();
+  routeActiveIndex = routeFiltered.length
+    ? Math.min(Math.max(routeActiveIndex, 0), routeFiltered.length - 1)
+    : -1;
+
+  if (!routeFiltered.length) {
+    els.routeMenu.innerHTML = `<li class="route-menu-empty">${
+      routeOptions.length ? 'Ничего не найдено' : 'Маршруты не загружены'
+    }</li>`;
+  } else {
+    els.routeMenu.innerHTML = routeFiltered
+      .map(
+        (route, index) => `<li
+          id="route-option-${index}"
+          class="route-menu-item${index === routeActiveIndex ? ' is-active' : ''}"
+          role="option"
+          data-route="${esc(route.numl)}"
+          aria-selected="${index === routeActiveIndex}">
+          <strong>№${esc(route.numl)}</strong>
+          ${route.name ? `<span>${esc(route.name)}</span>` : ''}
+        </li>`,
+      )
+      .join('');
+  }
+
+  els.routeMenu.hidden = false;
+  els.routeInput.setAttribute('aria-expanded', 'true');
+  els.routeInput.setAttribute('aria-activedescendant', routeActiveIndex >= 0 ? `route-option-${routeActiveIndex}` : '');
+
+  if (routeActiveIndex >= 0) {
+    els.routeMenu
+      .querySelector(`#route-option-${routeActiveIndex}`)
+      ?.scrollIntoView({ block: 'nearest' });
+  }
+}
+
+function openRouteMenu(showAll) {
+  routeMenuShowAll = Boolean(showAll);
+  const current = els.routeInput.value.trim();
+  routeActiveIndex = routeMenuShowAll
+    ? routeOptions.findIndex((route) => String(route.numl) === current)
+    : -1;
+  renderRouteMenu();
+}
+
+function closeRouteMenu() {
+  if (!els.routeMenu) return;
+  els.routeMenu.hidden = true;
+  els.routeInput.setAttribute('aria-expanded', 'false');
+  els.routeInput.removeAttribute('aria-activedescendant');
+  routeActiveIndex = -1;
+}
+
+function chooseRoute(route) {
+  els.routeInput.value = route;
+  closeRouteMenu();
+  handlers.onRouteSelect?.({ transport: currentTransport, route });
+}
+
 export function renderRouteOptions(routes = []) {
-  if (!els.routeOptions) return;
-
-  const sorted = [...routes].sort((a, b) => {
-    const aNum = Number.parseInt(a.numl, 10);
-    const bNum = Number.parseInt(b.numl, 10);
-    if (Number.isFinite(aNum) && Number.isFinite(bNum) && aNum !== bNum) return aNum - bNum;
-    return String(a.numl).localeCompare(String(b.numl), 'ru');
-  });
-
-  els.routeOptions.innerHTML = sorted
-    .map((route) => {
-      const label = route.name ? `Маршрут №${route.numl} · ${route.name}` : `Маршрут №${route.numl}`;
-      return `<option value="${esc(route.numl)}" label="${esc(label)}"></option>`;
-    })
-    .join('');
+  routeOptions = sortedRoutes(routes);
+  if (!els.routeMenu?.hidden) renderRouteMenu();
 }
 
 export function setMockChecked(checked) {
@@ -228,9 +348,6 @@ export function setMockChecked(checked) {
 
 export function setLoading(loading) {
   els.loadingBar.classList.toggle('is-active', loading);
-  els.showBtn.classList.toggle('is-loading', loading);
-  els.showBtn.disabled = loading;
-  els.showBtnLabel.textContent = loading ? 'Загрузка…' : 'Показать маршрут';
 }
 
 export function setStatusVehiclesCount(count) {
