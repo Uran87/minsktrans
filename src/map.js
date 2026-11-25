@@ -39,17 +39,19 @@ let stopPopupOverlay = null;
 
 let currentColor = TRANSPORT_COLORS.bus;
 let selectedVehicleId = null;
-let stopsClustered = null;
+let stopDisplayTier = null;
 
 let allStopDefs = [];
-let allStopGroups = [];
+let allStopGroups = { far: null, near: null };
 let allStopsInput = null;
 let routeStopDefs = [];
-let routeStopGroups = [];
+let routeStopGroups = { far: null, near: null };
 let routeStopIdSet = new Set();
 let routeLineFeature = null;
 
-const CLUSTER_DISTANCE_METERS = 200;
+const FAR_CLUSTER_DISTANCE_METERS = 1000;
+const NEAR_CLUSTER_DISTANCE_METERS = 200;
+const NEAR_CLUSTER_MIN_ZOOM = 11;
 const LABEL_MIN_ZOOM = 17;
 
 /** vehicleId -> { feature, style, icon, color, selected } */
@@ -237,11 +239,14 @@ function clusterStopStyle(color = null) {
   });
 }
 
-function isClustered() {
-  return (map?.getView().getZoom() ?? 12) < LABEL_MIN_ZOOM;
+function currentStopTier() {
+  const zoom = map?.getView().getZoom() ?? 12;
+  if (zoom >= LABEL_MIN_ZOOM) return 'individual';
+  if (zoom < NEAR_CLUSTER_MIN_ZOOM) return 'far';
+  return 'near';
 }
 
-function clusterStops(defs) {
+function clusterStops(defs, distanceMeters) {
   const groups = [];
 
   for (const def of defs) {
@@ -254,7 +259,7 @@ function clusterStops(defs) {
         [group.lon, group.lat],
       );
 
-      if (distance <= CLUSTER_DISTANCE_METERS && distance < bestDistance) {
+      if (distance <= distanceMeters && distance < bestDistance) {
         best = group;
         bestDistance = distance;
       }
@@ -272,6 +277,17 @@ function clusterStops(defs) {
   }
 
   return groups;
+}
+
+function groupsFor(defs, cache, tier) {
+  if (tier === 'individual') return null;
+  if (!cache[tier]) {
+    cache[tier] = clusterStops(
+      defs,
+      tier === 'far' ? FAR_CLUSTER_DISTANCE_METERS : NEAR_CLUSTER_DISTANCE_METERS,
+    );
+  }
+  return cache[tier];
 }
 
 function makeStopFeature(def, kind, style) {
@@ -296,8 +312,8 @@ function makeClusterFeature(group, style) {
   return feature;
 }
 
-function displayStopFeatures(defs, groups, clustered, color, kind) {
-  if (!clustered) {
+function displayStopFeatures(defs, groups, tier, color, kind) {
+  if (tier === 'individual') {
     return defs.map((def) => {
       const showLabel = color ? true : !routeStopIdSet.has(def.stopId);
       return makeStopFeature(
@@ -327,24 +343,26 @@ function displayStopFeatures(defs, groups, clustered, color, kind) {
 function renderAllStopsDisplay() {
   if (!stopsSource) return;
 
-  const clustered = isClustered();
-  stopsClustered = clustered;
+  const tier = currentStopTier();
+  stopDisplayTier = tier;
+  const groups = groupsFor(allStopDefs, allStopGroups, tier);
   stopsSource.clear();
   stopsSource.addFeatures(
-    displayStopFeatures(allStopDefs, allStopGroups, clustered, null, 'allstop'),
+    displayStopFeatures(allStopDefs, groups, tier, null, 'allstop'),
   );
 }
 
 function renderRouteStopsDisplay() {
   if (!routeSource) return;
 
+  const tier = currentStopTier();
   routeSource.clear();
   if (routeLineFeature) routeSource.addFeature(routeLineFeature);
   routeSource.addFeatures(
     displayStopFeatures(
       routeStopDefs,
-      routeStopGroups,
-      isClustered(),
+      groupsFor(routeStopDefs, routeStopGroups, tier),
+      tier,
       currentColor,
       'stop',
     ),
@@ -354,10 +372,10 @@ function renderRouteStopsDisplay() {
 function updateStopDisplay() {
   if (!map) return;
 
-  const clustered = isClustered();
-  if (clustered === stopsClustered) return;
+  const tier = currentStopTier();
+  if (tier === stopDisplayTier) return;
 
-  stopsClustered = clustered;
+  stopDisplayTier = tier;
   renderAllStopsDisplay();
   renderRouteStopsDisplay();
 
@@ -455,9 +473,14 @@ export function initMap(target, { onVehicleClick, onStopClick, onEmptyClick } = 
       const geometry = stopFeature.getGeometry();
       const coordinate = geometry?.getCoordinates?.();
       if (coordinate) {
-        map.getView().animate({
+        const view = map.getView();
+        const currentZoom = view.getZoom() ?? 12;
+        const targetZoom =
+          currentZoom < NEAR_CLUSTER_MIN_ZOOM ? NEAR_CLUSTER_MIN_ZOOM : LABEL_MIN_ZOOM;
+
+        view.animate({
           center: coordinate,
-          zoom: LABEL_MIN_ZOOM,
+          zoom: targetZoom,
           duration: 500,
         });
       }
@@ -554,13 +577,13 @@ export function setAllStops(stops) {
     });
   }
 
-  allStopGroups = clusterStops(allStopDefs);
+  allStopGroups = { far: null, near: null };
   renderAllStopsDisplay();
 }
 
 export function clearAllStops() {
   allStopDefs = [];
-  allStopGroups = [];
+  allStopGroups = { far: null, near: null };
   allStopsInput = null;
   stopsSource?.clear();
 }
@@ -617,7 +640,7 @@ export function setRoute(stops, transport, geometryLine = null) {
     });
   }
 
-  routeStopGroups = clusterStops(routeStopDefs);
+  routeStopGroups = { far: null, near: null };
   routeStopIdSet = new Set(routeStopDefs.map((stop) => stop.stopId));
   renderRouteStopsDisplay();
   renderAllStopsDisplay();
@@ -626,7 +649,7 @@ export function setRoute(stops, transport, geometryLine = null) {
 export function clearRoute() {
   routeLineFeature = null;
   routeStopDefs = [];
-  routeStopGroups = [];
+  routeStopGroups = { far: null, near: null };
   routeStopIdSet = new Set();
   routeSource?.clear();
   renderAllStopsDisplay();
