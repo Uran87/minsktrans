@@ -16,6 +16,7 @@ import Feature from 'ol/Feature.js';
 import Point from 'ol/geom/Point.js';
 import LineString from 'ol/geom/LineString.js';
 import { fromLonLat } from 'ol/proj.js';
+import { getDistance } from 'ol/sphere.js';
 import { createEmpty, extend, isEmpty } from 'ol/extent.js';
 import { Style, Icon, Stroke, Fill, Text } from 'ol/style.js';
 import { defaults as defaultControls } from 'ol/control/defaults.js';
@@ -38,7 +39,18 @@ let stopPopupOverlay = null;
 
 let currentColor = TRANSPORT_COLORS.bus;
 let selectedVehicleId = null;
-let stopLabelsVisible = false;
+let stopsClustered = null;
+
+let allStopDefs = [];
+let allStopGroups = [];
+let allStopsInput = null;
+let routeStopDefs = [];
+let routeStopGroups = [];
+let routeStopIdSet = new Set();
+let routeLineFeature = null;
+
+const CLUSTER_DISTANCE_METERS = 200;
+const LABEL_MIN_ZOOM = 17;
 
 /** vehicleId -> { feature, style, icon, color, selected } */
 const vehicleEntries = new Map();
@@ -94,13 +106,13 @@ function createVehicleStyle(color, selected, vector = 0) {
  * Размер 18×15 px ≈ 0,5 см по ширине при 96 dpi.
  * Для остановок маршрута иконка увеличивается через scale.
  */
-function stopSignSvg(color = null) {
+function stopSignSvg(color = null, width = 18, height = 15) {
   const signFill = color || '#f8fafc';
   const signStroke = color ? '#f8fafc' : '#0b1220';
   const glyph = '#0b1220';
   const windowFill = color || '#f8fafc';
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="15" viewBox="0 0 18 15">
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 18 15">
     <rect x="0.8" y="0.8" width="16.4" height="13" rx="2.8"
           fill="${signFill}" stroke="${signStroke}" stroke-width="1.6"/>
     <rect x="3.6" y="3.8" width="10.8" height="7" rx="1.4" fill="${glyph}"/>
@@ -113,6 +125,7 @@ function stopSignSvg(color = null) {
 }
 
 const stopIconCache = new Map();
+const clusterIconCache = new Map();
 
 function stopSignIcon(color = null) {
   const key = color || 'default';
@@ -124,11 +137,33 @@ function stopSignIcon(color = null) {
         src: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(stopSignSvg(color)),
         anchor: [0.5, 1],
         scale: color ? 1.55 : 1,
+        declutterMode: 'none',
       }),
     );
   }
 
   return stopIconCache.get(key);
+}
+
+/** Кластерный значок на 2 px больше обычного (20×17 вместо 18×15). */
+function stopClusterIcon(color = null) {
+  const key = color || 'default';
+
+  if (!clusterIconCache.has(key)) {
+    clusterIconCache.set(
+      key,
+      new Icon({
+        src:
+          'data:image/svg+xml;charset=UTF-8,' +
+          encodeURIComponent(stopSignSvg(color, 20, 17)),
+        anchor: [0.5, 1],
+        scale: color ? 1.55 : 1,
+        declutterMode: 'none',
+      }),
+    );
+  }
+
+  return clusterIconCache.get(key);
 }
 
 /* ------------------------------------------------------------------ */
@@ -150,14 +185,28 @@ const baseLayers = {
   hybrid: new TileLayer({ source: googleTiles('y'), visible: false }),
 };
 
-/** Обычные остановки: маленький знак остановки ≈0,5 см. */
-const allStopsStyle = new Style({
-  image: stopSignIcon(null),
-});
+/* ------------------------------------------------------------------ */
+/* Стили маршрута и остановок                                          */
+/* ------------------------------------------------------------------ */
 
-/* ------------------------------------------------------------------ */
-/* Стили маршрута                                                      */
-/* ------------------------------------------------------------------ */
+function stopLabel(name, offsetY) {
+  return new Text({
+    text: name || '',
+    font: '600 12px Inter, "Segoe UI", system-ui, sans-serif',
+    offsetY,
+    padding: [3, 5, 3, 5],
+    overflow: true,
+    fill: new Fill({ color: '#f8fafc' }),
+    stroke: new Stroke({ color: 'rgba(2, 6, 23, 0.85)', width: 3 }),
+  });
+}
+
+function allStopStyle(name, showLabel = false) {
+  return new Style({
+    image: stopSignIcon(null),
+    text: showLabel ? stopLabel(name, -20) : undefined,
+  });
+}
 
 function routeLineStyle(color) {
   return [
@@ -178,39 +227,144 @@ function routeLineStyle(color) {
 function routeStopStyle(color, name, showLabel = true) {
   return new Style({
     image: stopSignIcon(color),
-    text: showLabel
-      ? new Text({
-          text: name || '',
-          font: '600 12px Inter, "Segoe UI", system-ui, sans-serif',
-          offsetY: -38,
-          padding: [3, 5, 3, 5],
-          overflow: true,
-          fill: new Fill({ color: '#f8fafc' }),
-          stroke: new Stroke({ color: 'rgba(2, 6, 23, 0.85)', width: 3 }),
-        })
-      : undefined,
+    text: showLabel ? stopLabel(name, -30) : undefined,
   });
 }
 
-function updateStopLabels() {
-  if (!map || !routeSource) return;
+function clusterStopStyle(color = null) {
+  return new Style({
+    image: stopClusterIcon(color),
+  });
+}
 
-  const zoom = map.getView().getZoom() ?? 12;
-  const visible = zoom >= 14.2;
-  if (visible === stopLabelsVisible) return;
+function isClustered() {
+  return (map?.getView().getZoom() ?? 12) < LABEL_MIN_ZOOM;
+}
 
-  stopLabelsVisible = visible;
+function clusterStops(defs) {
+  const groups = [];
 
-  for (const feature of routeSource.getFeatures()) {
-    if (feature.get('kind') !== 'stop') continue;
-    feature.setStyle(
-      routeStopStyle(feature.get('stopColor') || currentColor, feature.get('name'), visible),
-    );
+  for (const def of defs) {
+    let best = null;
+    let bestDistance = Infinity;
+
+    for (const group of groups) {
+      const distance = getDistance(
+        [def.lon, def.lat],
+        [group.lon, group.lat],
+      );
+
+      if (distance <= CLUSTER_DISTANCE_METERS && distance < bestDistance) {
+        best = group;
+        bestDistance = distance;
+      }
+    }
+
+    if (!best) {
+      groups.push({ stops: [def], lon: def.lon, lat: def.lat });
+      continue;
+    }
+
+    const count = best.stops.length;
+    best.lon = (best.lon * count + def.lon) / (count + 1);
+    best.lat = (best.lat * count + def.lat) / (count + 1);
+    best.stops.push(def);
   }
+
+  return groups;
+}
+
+function makeStopFeature(def, kind, style) {
+  const feature = new Feature({
+    geometry: new Point(fromLonLat([def.lon, def.lat])),
+  });
+  feature.set('kind', kind);
+  feature.set('stopId', def.stopId);
+  feature.set('name', def.name);
+  feature.setStyle(style);
+  return feature;
+}
+
+function makeClusterFeature(group, style) {
+  const feature = new Feature({
+    geometry: new Point(fromLonLat([group.lon, group.lat])),
+  });
+  feature.set('kind', 'cluster');
+  feature.set('stopIds', group.stops.map((stop) => stop.stopId));
+  feature.set('name', `${group.stops.length} остановки`);
+  feature.setStyle(style);
+  return feature;
+}
+
+function displayStopFeatures(defs, groups, clustered, color, kind) {
+  if (!clustered) {
+    return defs.map((def) => {
+      const showLabel = color ? true : !routeStopIdSet.has(def.stopId);
+      return makeStopFeature(
+        def,
+        kind,
+        color
+          ? routeStopStyle(color, def.name, showLabel)
+          : allStopStyle(def.name, showLabel),
+      );
+    });
+  }
+
+  return groups.map((group) => {
+    if (group.stops.length === 1) {
+      const def = group.stops[0];
+      return makeStopFeature(
+        def,
+        kind,
+        color ? routeStopStyle(color, def.name, false) : allStopStyle(def.name, false),
+      );
+    }
+
+    return makeClusterFeature(group, clusterStopStyle(color));
+  });
+}
+
+function renderAllStopsDisplay() {
+  if (!stopsSource) return;
+
+  const clustered = isClustered();
+  stopsClustered = clustered;
+  stopsSource.clear();
+  stopsSource.addFeatures(
+    displayStopFeatures(allStopDefs, allStopGroups, clustered, null, 'allstop'),
+  );
+}
+
+function renderRouteStopsDisplay() {
+  if (!routeSource) return;
+
+  routeSource.clear();
+  if (routeLineFeature) routeSource.addFeature(routeLineFeature);
+  routeSource.addFeatures(
+    displayStopFeatures(
+      routeStopDefs,
+      routeStopGroups,
+      isClustered(),
+      currentColor,
+      'stop',
+    ),
+  );
+}
+
+function updateStopDisplay() {
+  if (!map) return;
+
+  const clustered = isClustered();
+  if (clustered === stopsClustered) return;
+
+  stopsClustered = clustered;
+  renderAllStopsDisplay();
+  renderRouteStopsDisplay();
 
   // В некоторых версиях OL смены стиля фичи недостаточно для перерисовки
   // слоя с declutter — явно просим слой обновиться.
-  routeLayer.changed();
+  stopsLayer?.changed();
+  routeLayer?.changed();
 }
 
 /* ------------------------------------------------------------------ */
@@ -228,8 +382,8 @@ export function initMap(target, { onVehicleClick, onStopClick, onEmptyClick } = 
 
   stopsLayer = new VectorLayer({
     source: stopsSource,
-    style: allStopsStyle,
     opacity: 0.9,
+    declutter: true,
     updateWhileAnimating: false,
     updateWhileInteracting: false,
   });
@@ -297,6 +451,19 @@ export function initMap(target, { onVehicleClick, onStopClick, onEmptyClick } = 
     );
 
     const stopId = stopFeature?.get('stopId');
+    if (stopFeature?.get('kind') === 'cluster') {
+      const geometry = stopFeature.getGeometry();
+      const coordinate = geometry?.getCoordinates?.();
+      if (coordinate) {
+        map.getView().animate({
+          center: coordinate,
+          zoom: LABEL_MIN_ZOOM,
+          duration: 500,
+        });
+      }
+      return;
+    }
+
     if (stopId !== undefined && stopId !== null) {
       const geometry = stopFeature.getGeometry();
       const coordinate = geometry?.getCoordinates?.() || event.coordinate;
@@ -324,7 +491,8 @@ export function initMap(target, { onVehicleClick, onStopClick, onEmptyClick } = 
     const interactive =
       feature &&
       (feature.get('vehicleId') !== undefined ||
-        feature.get('stopId') !== undefined);
+        feature.get('stopId') !== undefined ||
+        feature.get('kind') === 'cluster');
 
     targetElement.style.cursor = interactive ? 'pointer' : '';
   });
@@ -341,7 +509,7 @@ export function initMap(target, { onVehicleClick, onStopClick, onEmptyClick } = 
     map.addOverlay(stopPopupOverlay);
   }
 
-  map.on('moveend', updateStopLabels);
+  map.on('moveend', updateStopDisplay);
 
   return map;
 }
@@ -363,8 +531,14 @@ export function hideStopPopup() {
 export function setAllStops(stops) {
   if (!stopsSource) return;
 
+  if (stops === allStopsInput && allStopDefs.length) {
+    renderAllStopsDisplay();
+    return;
+  }
+
   const list = stops instanceof Map ? [...stops.values()] : Array.isArray(stops) ? stops : [];
-  const features = [];
+  allStopsInput = stops;
+  allStopDefs = [];
 
   for (const stop of list) {
     if (!stop) continue;
@@ -372,21 +546,22 @@ export function setAllStops(stops) {
     const lat = Number(stop.lat);
     if (!Number.isFinite(lon) || !Number.isFinite(lat)) continue;
 
-    features.push(
-      new Feature({
-        geometry: new Point(fromLonLat([lon, lat])),
-        kind: 'allstop',
-        stopId: stop.stopId,
-        name: stop.name,
-      }),
-    );
+    allStopDefs.push({
+      stopId: stop.stopId,
+      name: stop.name,
+      lon,
+      lat,
+    });
   }
 
-  stopsSource.clear();
-  stopsSource.addFeatures(features);
+  allStopGroups = clusterStops(allStopDefs);
+  renderAllStopsDisplay();
 }
 
 export function clearAllStops() {
+  allStopDefs = [];
+  allStopGroups = [];
+  allStopsInput = null;
   stopsSource?.clear();
 }
 
@@ -399,9 +574,6 @@ export function setRoute(stops, transport, geometryLine = null) {
 
   const type = normalizeTransportType(transport) || transport;
   currentColor = TRANSPORT_COLORS[type] || TRANSPORT_COLORS.bus;
-  routeSource.clear();
-
-  stopLabelsVisible = (map?.getView().getZoom() ?? 12) >= 14.2;
 
   const coordinates = [];
   const addCoordinate = (lon, lat) => {
@@ -422,28 +594,42 @@ export function setRoute(stops, transport, geometryLine = null) {
     for (const stop of stops) addCoordinate(stop.lon, stop.lat);
   }
 
+  routeLineFeature = null;
   if (coordinates.length > 1) {
     const line = new Feature({ geometry: new LineString(coordinates) });
     line.set('kind', 'line');
     line.setStyle(routeLineStyle(currentColor));
-    routeSource.addFeature(line);
+    routeLineFeature = line;
   }
 
+  routeStopDefs = [];
+
   for (const stop of stops) {
-    const feature = new Feature({
-      geometry: new Point(fromLonLat([stop.lon, stop.lat])),
+    const lon = Number(stop.lon);
+    const lat = Number(stop.lat);
+    if (!Number.isFinite(lon) || !Number.isFinite(lat)) continue;
+
+    routeStopDefs.push({
+      stopId: stop.stopId,
+      name: stop.name,
+      lon,
+      lat,
     });
-    feature.set('kind', 'stop');
-    feature.set('stopId', stop.stopId);
-    feature.set('name', stop.name);
-    feature.set('stopColor', currentColor);
-    feature.setStyle(routeStopStyle(currentColor, stop.name, stopLabelsVisible));
-    routeSource.addFeature(feature);
   }
+
+  routeStopGroups = clusterStops(routeStopDefs);
+  routeStopIdSet = new Set(routeStopDefs.map((stop) => stop.stopId));
+  renderRouteStopsDisplay();
+  renderAllStopsDisplay();
 }
 
 export function clearRoute() {
+  routeLineFeature = null;
+  routeStopDefs = [];
+  routeStopGroups = [];
+  routeStopIdSet = new Set();
   routeSource?.clear();
+  renderAllStopsDisplay();
 }
 
 /* ------------------------------------------------------------------ */
