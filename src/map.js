@@ -23,8 +23,6 @@ import { defaults as defaultControls } from 'ol/control/defaults.js';
 import { TRANSPORT_COLORS, normalizeTransportType } from './constants.js';
 
 const MINSK_CENTER = [27.5615, 53.9006];
-const GOOGLE_ATTRIBUTION =
-  '© <a href="https://www.google.com/maps" target="_blank" rel="noopener noreferrer">Google</a>';
 
 let map = null;
 let routeLayer = null;
@@ -143,7 +141,6 @@ function googleTiles(lyrs) {
   // а для обычных <img> они и не нужны.
   return new XYZ({
     url: `https://mt1.google.com/vt/lyrs=${lyrs}&x={x}&y={y}&z={z}`,
-    attributions: GOOGLE_ATTRIBUTION,
     maxZoom: 20,
   });
 }
