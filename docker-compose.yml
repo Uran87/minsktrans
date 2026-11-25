@@ -1,0 +1,20 @@
+name: minsktrans
+
+services:
+  web:
+    build:
+      context: .
+      args:
+        # База API на стороне браузера. Nginx проксирует её на API_ORIGIN.
+        VITE_API_BASE: ${VITE_API_BASE:-/api/v1}
+        # true — при первом запуске включён демо-режим (маршрут №1 без API).
+        # Переключатель «Демо-данные» в интерфейсе меняет режим на лету.
+        VITE_MOCK_DEFAULT: ${VITE_MOCK_DEFAULT:-true}
+    image: minsktrans-live:latest
+    container_name: minsktrans-live
+    ports:
+      - "${APP_PORT:-8080}:80"
+    environment:
+      # Адрес REST API СНОиПД (без завершающего слэша).
+      API_ORIGIN: ${API_ORIGIN:-http://194.158.195.62:41290}
+    restart: unless-stopped

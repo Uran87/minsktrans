@@ -1,0 +1,21 @@
+{
+  "name": "minsktrans-live",
+  "private": true,
+  "version": "1.0.0",
+  "description": "SPA-карта городского пассажирского транспорта Минска в реальном времени (OpenLayers + Vanilla JS + Vite)",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "dependencies": {
+    "ol": "^10.11.0"
+  },
+  "devDependencies": {
+    "vite": "^7.0.0"
+  }
+}
