@@ -368,8 +368,31 @@ export function renderDetails({
       <span>${trip ? `${trip.stops.length} ${pluralize(trip.stops.length, ['остановка', 'остановки', 'остановок'])}` : 'нет данных'}</span>
     </div>
     ${stopsNote}
-    ${rows ? `<ol class="stop-list">${rows}</ol>` : ''}
+    ${rows ? `<div class="stop-scroll"><ol class="stop-list">${rows}</ol></div>` : ''}
   `;
+
+  centerNextStop();
+}
+
+/**
+ * Прокручивает список остановок так, чтобы следующая остановка была
+ * в середине видимой области (насколько позволяет высота списка).
+ */
+function centerNextStop() {
+  const scroller = els.detailsBody.querySelector('.stop-scroll');
+  const target = scroller?.querySelector('.stop-item.is-next');
+  if (!scroller || !target) return;
+
+  const align = () => {
+    const scrollerRect = scroller.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const delta =
+      targetRect.top + targetRect.height / 2 - (scrollerRect.top + scroller.clientHeight / 2);
+    scroller.scrollTop += delta;
+  };
+
+  align();
+  requestAnimationFrame(align);
 }
 
 export function renderDetailsError(vehicleId, error) {
