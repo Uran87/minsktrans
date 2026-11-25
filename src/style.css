@@ -657,48 +657,69 @@ button:focus-visible {
   color: var(--accent);
 }
 
-.stop-legend {
+.map-controls {
+  position: absolute;
+  z-index: 19;
+  left: 50%;
+  bottom: 24px;
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding: 0 2px;
-}
-
-.stop-legend span {
-  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  color: var(--muted-2);
-  font-size: 10.5px;
+  gap: 10px;
+  max-width: calc(100vw - 32px);
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px) saturate(140%);
+  transform: translateX(-50%);
+  animation: map-controls-in 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.legend-stop-icon {
+@keyframes map-controls-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 10px);
+  }
+}
+
+.map-controls-title {
   flex: none;
-  width: 13px;
-  height: 16px;
+  padding: 0 2px;
+  color: var(--muted-2);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
-.legend-stop-icon .pole {
-  fill: #0b1220;
+.map-controls .chips {
+  flex: none;
+  gap: 4px;
 }
 
-.legend-stop-icon .sign {
-  fill: #f8fafc;
-  stroke: #0b1220;
-  stroke-width: 1.6;
+.map-controls .chip {
+  flex: none;
+  min-width: 66px;
+  padding: 7px 12px;
+  white-space: nowrap;
 }
 
-.legend-stop-icon .bus {
-  fill: #0b1220;
-}
+@media (max-width: 950px) {
+  .map-controls {
+    bottom: 26px;
+    gap: 6px;
+    padding: 6px 8px;
+  }
 
-.legend-stop-icon.is-route .sign {
-  fill: var(--accent);
-  stroke: #f8fafc;
-}
+  .map-controls-title {
+    display: none;
+  }
 
-.legend-stop-icon.is-route .bus {
-  fill: #07101f;
+  .map-controls .chip {
+    min-width: 0;
+    padding: 7px 10px;
+  }
 }
 
 .switch-row {
