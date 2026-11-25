@@ -137,6 +137,12 @@ function wireEvents() {
   });
 
   els.detailsBody.addEventListener('click', (event) => {
+    const stopButton = event.target.closest('button[data-stop-id]');
+    if (stopButton) {
+      handlers.onStopSelect?.(Number(stopButton.dataset.stopId));
+      return;
+    }
+
     const button = event.target.closest('button[data-retry-id]');
     if (!button) return;
     handlers.onDetailsRetry?.(button.dataset.retryId);
@@ -326,13 +332,17 @@ export function renderDetails({
           if (isNext) flag = '<span class="stop-flag">следующая</span>';
           else if (index === lastIndex) flag = '<span class="stop-flag is-muted">пройдена</span>';
 
-          return `<li class="${classes.join(' ')}">
-            <span class="stop-time">${esc(formatDeparture(stop.departures))}</span>
-            <span class="stop-dot" aria-hidden="true"></span>
-            <span class="stop-info">
-              <span class="stop-name">${esc(name)}</span>
-              ${flag}
-            </span>
+          return `<li>
+            <button type="button" class="${classes.join(' ')}" data-stop-id="${esc(stop.stopId)}"
+                    title="Перейти к остановке «${esc(name)}»"
+                    aria-label="Открыть остановку ${esc(name)}">
+              <span class="stop-time">${esc(formatDeparture(stop.departures))}</span>
+              <span class="stop-dot" aria-hidden="true"></span>
+              <span class="stop-info">
+                <span class="stop-name">${esc(name)}</span>
+                ${flag}
+              </span>
+            </button>
           </li>`;
         })
         .join('')

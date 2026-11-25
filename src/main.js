@@ -569,6 +569,18 @@ function handleStopClick(stopId, coordinate) {
   loadScoreboard(Number(stopId));
 }
 
+function handleTripStopSelect(stopId) {
+  const stop = state.stops.get(Number(stopId));
+
+  if (!stop) {
+    ui.toast(`Остановка ${stopId} не найдена в справочнике`, 'error');
+    return;
+  }
+
+  const coordinate = mapView.focusStop(stop);
+  handleStopClick(stopId, coordinate);
+}
+
 async function loadScoreboard(stopId) {
   const token = ++state.scoreboardToken;
 
@@ -730,6 +742,7 @@ ui.init({
     onVehicleSelect: (vehicleId) => selectVehicle(vehicleId, true),
     onDetailsClose: closeDetails,
     onDetailsRetry: (vehicleId) => openDetails(vehicleId),
+    onStopSelect: handleTripStopSelect,
     onStopPopupClose: closeStopPopup,
     onScoreboardRefresh: (stopId) => loadScoreboard(stopId),
   },

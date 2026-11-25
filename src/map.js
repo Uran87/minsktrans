@@ -532,6 +532,24 @@ export function focusVehicle(vehicleId) {
   });
 }
 
+/**
+ * Приближает карту к остановке и возвращает её координату,
+ * чтобы можно было сразу показать попап.
+ */
+export function focusStop(stop, zoom = 16) {
+  const coordinate = fromLonLat([stop.lon, stop.lat]);
+  if (!map) return coordinate;
+
+  const view = map.getView();
+  view.animate({
+    center: coordinate,
+    zoom: Math.max(view.getZoom() ?? 12, zoom),
+    duration: 500,
+  });
+
+  return coordinate;
+}
+
 /* ------------------------------------------------------------------ */
 /* Прочее                                                              */
 /* ------------------------------------------------------------------ */

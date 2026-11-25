@@ -985,7 +985,26 @@ button:focus-visible {
   display: flex;
   align-items: flex-start;
   gap: 12px;
+  width: 100%;
   padding: 6px 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+  transition: background 0.18s;
+}
+
+.stop-item:hover {
+  background: rgba(148, 163, 184, 0.08);
+}
+
+.stop-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 0;
 }
 
 .stop-time {
@@ -1123,7 +1142,7 @@ button:focus-visible {
 }
 
 .stop-popup {
-  position: absolute;
+  position: relative;
   z-index: 1;
   display: flex;
   flex-direction: column;
