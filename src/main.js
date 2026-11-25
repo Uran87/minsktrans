@@ -19,7 +19,7 @@ const VALID_LAYERS = ['map', 'satellite', 'hybrid'];
 
 const state = {
   transport: 'bus',
-  route: '1',
+  route: '',
   stops: new Map(),
   stopsPromise: null,
   vehicles: [],
@@ -53,7 +53,7 @@ const prefs = loadPrefs();
 function loadPrefs() {
   const defaults = {
     transport: 'bus',
-    route: '1',
+    route: '',
     layer: 'map',
     mock: api.isMockEnabled(),
   };
@@ -62,10 +62,7 @@ function loadPrefs() {
     const stored = JSON.parse(localStorage.getItem(PREFS_KEY) || '{}');
     return {
       transport: TRANSPORT_TYPES.includes(stored.transport) ? stored.transport : defaults.transport,
-      route:
-        typeof stored.route === 'string' && stored.route.trim()
-          ? stored.route.trim().slice(0, 8)
-          : defaults.route,
+      route: '',
       layer: VALID_LAYERS.includes(stored.layer) ? stored.layer : defaults.layer,
       mock: typeof stored.mock === 'boolean' ? stored.mock : defaults.mock,
     };
@@ -116,7 +113,7 @@ function renderAllStops(stopsMap) {
 /**
  * Фоновый предзагруз справочника: все остановки должны появиться на карте
  * сразу, ещё до выбора маршрута. Ошибку здесь не показываем — она всплывёт
- * при нажатии «Показать маршрут».
+ * при выборе маршрута.
  */
 function loadAllStops() {
   const generation = state.dataGeneration;
@@ -256,16 +253,18 @@ function vehiclesForRoute(vehicles, route) {
 
 function renderRouteVehicles() {
   if (!state.routeStops.length) {
-    ui.renderVehicles([], state.transport, null, 'Нажмите «Показать маршрут»');
-  } else {
-    ui.renderVehicles(
-      state.routeVehicles,
-      state.transport,
-      state.selectedVehicleId,
-      'На маршруте пока нет машин',
-      { route: state.route, stops: state.routeStops },
-    );
+    ui.setVehiclesVisible(false);
+    return;
   }
+
+  ui.setVehiclesVisible(true);
+  ui.renderVehicles(
+    state.routeVehicles,
+    state.transport,
+    state.selectedVehicleId,
+    'На маршруте пока нет машин',
+    { route: state.route, stops: state.routeStops },
+  );
 }
 
 /**
@@ -723,7 +722,7 @@ function handleSubmit({ transport, route }) {
   savePrefs({ transport: state.transport, route: state.route });
 
   if (!state.route) {
-    ui.toast('Введите номер маршрута', 'error');
+    ui.toast('Выберите маршрут', 'error');
     return;
   }
 
@@ -791,6 +790,7 @@ function resetData() {
   closeStopPopup();
   ui.closeDetails();
   ui.setLoading(false);
+  ui.setVehiclesVisible(false);
   ui.renderVehicles([], state.transport, null);
 }
 

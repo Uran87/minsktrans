@@ -60,6 +60,7 @@ export function init(config) {
   els.transportToggle = document.getElementById('transport-toggle');
   els.routeInput = document.getElementById('route-input');
   els.routeMenu = document.getElementById('route-menu');
+  els.vehiclesBlock = document.getElementById('vehicles-block');
   els.vehiclesBadge = document.getElementById('vehicles-badge');
   els.vehiclesList = document.getElementById('vehicles-list');
   els.layerToggle = document.getElementById('layer-toggle');
@@ -77,7 +78,7 @@ export function init(config) {
   els.loadingBar = document.getElementById('loading-bar');
 
   setActiveTransport(config.transport || 'bus');
-  els.routeInput.value = config.route || '1';
+  els.routeInput.value = config.route || '';
   els.mockToggle.checked = Boolean(config.mock);
   els.apiBaseLabel.textContent = config.apiBase || '/api/v1';
   setActiveLayer(config.layer || 'map');
@@ -346,6 +347,10 @@ export function setLoading(loading) {
   els.loadingBar.classList.toggle('is-active', loading);
 }
 
+export function setVehiclesVisible(visible) {
+  if (els.vehiclesBlock) els.vehiclesBlock.hidden = !visible;
+}
+
 export function renderVehicles(vehicles, transport, selectedId = null, emptyText = null, context = {}) {
   const count = vehicles.length;
   const type = normalizeTransportType(transport) || 'bus';
@@ -358,7 +363,7 @@ export function renderVehicles(vehicles, transport, selectedId = null, emptyText
 
   if (!count) {
     els.vehiclesList.innerHTML = `<li class="empty">${esc(
-      emptyText || 'Нажмите «Показать маршрут»',
+      emptyText || 'Нет данных',
     )}</li>`;
     return;
   }

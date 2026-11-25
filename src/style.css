@@ -315,6 +315,10 @@ button:focus-visible {
   pointer-events: none;
 }
 
+.input-wrap:has(#route-input:placeholder-shown) .input-prefix {
+  opacity: 0;
+}
+
 .input-prefix {
   position: absolute;
   top: 50%;
@@ -484,6 +488,10 @@ button:focus-visible {
   flex-direction: column;
   gap: 10px;
   min-height: 0;
+}
+
+.vehicles-block[hidden] {
+  display: none;
 }
 
 .block-head {
