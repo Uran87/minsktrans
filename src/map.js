@@ -540,17 +540,59 @@ export function focusVehicle(vehicleId) {
 }
 
 /**
- * Приближает карту к остановке и возвращает её координату,
- * чтобы можно было сразу показать попап.
+ * Приближает/центрирует карту к остановке и возвращает её координату,
+ * чтобы можно было сразу показать попап. Центр учитывает левую панель.
  */
-export function focusStop(stop, zoom = 16) {
+function visibleMapCenter() {
+  const size = map.getSize();
+  if (!size) return [0, 0];
+
+  let left = 0;
+  const sidebar = document.getElementById('sidebar');
+
+  if (sidebar) {
+    const style = getComputedStyle(sidebar);
+    const rect = sidebar.getBoundingClientRect();
+    const viewport = map.getViewport().getBoundingClientRect();
+
+    if (
+      style.display !== 'none' &&
+      style.visibility !== 'hidden' &&
+      rect.right > viewport.left &&
+      rect.left < viewport.right
+    ) {
+      left = Math.max(0, Math.min(rect.right - viewport.left, size[0]));
+    }
+  }
+
+  return [left + (size[0] - left) / 2, size[1] / 2];
+}
+
+export function focusStop(stop, zoom = null) {
   const coordinate = fromLonLat([stop.lon, stop.lat]);
   if (!map) return coordinate;
 
   const view = map.getView();
+  const size = map.getSize();
+  const targetPixel = visibleMapCenter();
+
+  if (!size) {
+    view.animate({ center: coordinate, duration: 500 });
+    return coordinate;
+  }
+
+  const currentZoom = view.getZoom() ?? 12;
+  const targetZoom = zoom === null ? currentZoom : Math.max(currentZoom, zoom);
+  const resolution = view.getResolutionForZoom(targetZoom);
+
+  const center = [
+    coordinate[0] - (targetPixel[0] - size[0] / 2) * resolution,
+    coordinate[1] + (targetPixel[1] - size[1] / 2) * resolution,
+  ];
+
   view.animate({
-    center: coordinate,
-    zoom: Math.max(view.getZoom() ?? 12, zoom),
+    center,
+    zoom: targetZoom,
     duration: 500,
   });
 

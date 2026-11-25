@@ -623,7 +623,7 @@ function closeDetails() {
 /* Остановки                                                           */
 /* ------------------------------------------------------------------ */
 
-function handleStopClick(stopId, coordinate) {
+function handleStopClick(stopId, coordinate, zoom = null) {
   const stop = state.stops.get(Number(stopId));
 
   if (!stop) {
@@ -634,6 +634,7 @@ function handleStopClick(stopId, coordinate) {
   if (ui.isDetailsOpen()) closeDetails();
 
   const isRouteStop = state.routeStopIds.includes(Number(stopId));
+  const target = mapView.focusStop(stop, zoom) || coordinate;
 
   ui.renderStopPopup({
     stop,
@@ -641,21 +642,13 @@ function handleStopClick(stopId, coordinate) {
     route: state.route,
     transport: state.transport,
   });
-  mapView.showStopPopupAt(coordinate, isRouteStop ? -44 : -30);
+  mapView.showStopPopupAt(target, isRouteStop ? -44 : -30);
 
   loadScoreboard(Number(stopId));
 }
 
 function handleTripStopSelect(stopId) {
-  const stop = state.stops.get(Number(stopId));
-
-  if (!stop) {
-    ui.toast(`Остановка ${stopId} не найдена в справочнике`, 'error');
-    return;
-  }
-
-  const coordinate = mapView.focusStop(stop);
-  handleStopClick(stopId, coordinate);
+  handleStopClick(stopId, null, 16);
 }
 
 async function loadScoreboard(stopId) {
