@@ -207,10 +207,13 @@ export function setStatus({ text, time = null, live = false, error = false }) {
   els.liveDot.classList.toggle('is-error', Boolean(error));
 }
 
-export function renderVehicles(vehicles, transport, selectedId = null, emptyText = null) {
+export function renderVehicles(vehicles, transport, selectedId = null, emptyText = null, context = {}) {
   const count = vehicles.length;
   const type = normalizeTransportType(transport) || 'bus';
   const color = TRANSPORT_COLORS[type] || TRANSPORT_COLORS.bus;
+  const typeLabel = TRANSPORT_LABELS[type] || 'Транспорт';
+  const routeNumber = context.route ? String(context.route).trim() : '';
+  const routeTitle = routeNumber ? `${typeLabel} №${routeNumber}` : typeLabel;
 
   els.vehiclesCount.textContent = `${count} ${pluralize(count, ['машина', 'машины', 'машин'])}`;
   els.vehiclesBadge.textContent = String(count);
@@ -228,11 +231,13 @@ export function renderVehicles(vehicles, transport, selectedId = null, emptyText
       const active = selectedId !== null && String(selectedId) === id;
       return `<li>
         <button type="button" class="vehicle-item${active ? ' is-active' : ''}"
-                data-vehicle-id="${esc(id)}" aria-label="Открыть карточку борта ${esc(id)}">
+                data-vehicle-id="${esc(id)}" title="Борт ${esc(id)}"
+                aria-label="Открыть карточку: ${esc(routeTitle)}, борт ${esc(id)}">
           <span class="vehicle-dot" style="--dot-color:${color}" aria-hidden="true"></span>
           <span class="vehicle-main">
-            <strong>Борт ${esc(id)}</strong>
+            <strong>${esc(routeTitle)}</strong>
             <small>${esc(directionLabel(vehicle.direction))}</small>
+            ${vehicle.nextStopName ? `<small class="vehicle-next" title="Следующая остановка">→ ${esc(vehicle.nextStopName)}</small>` : ''}
           </span>
           <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2"

@@ -179,14 +179,16 @@ async function showRoute() {
     }
 
     drawRoute(orderIds);
-    mapView.updateVehicles(vehicles, transport);
-    mapView.fitToRoute(state.routeStops, vehicles);
+    state.vehicles = attachNextStops(vehicles);
+    mapView.updateVehicles(state.vehicles, transport);
+    mapView.fitToRoute(state.routeStops, state.vehicles);
 
     ui.renderVehicles(
-      vehicles,
+      state.vehicles,
       transport,
       state.selectedVehicleId,
       'На маршруте пока нет машин',
+      { route, stops: state.routeStops },
     );
 
     const now = new Date();
@@ -261,6 +263,75 @@ function drawRoute(orderIds) {
   mapView.setRoute(state.routeStops, state.transport);
 }
 
+/* ------------------------------------------------------------------ */
+/* Следующая остановка для списка машин                                */
+/* ------------------------------------------------------------------ */
+
+function squaredDistance(a, b) {
+  const latScale = Math.cos((a.lat * Math.PI) / 180);
+  const dx = (b.lon - a.lon) * latScale;
+  const dy = b.lat - a.lat;
+  return dx * dx + dy * dy;
+}
+
+function bearingBetween(a, b) {
+  const lat1 = (a.lat * Math.PI) / 180;
+  const lat2 = (b.lat * Math.PI) / 180;
+  const dLon = ((b.lon - a.lon) * Math.PI) / 180;
+  const y = Math.sin(dLon) * Math.cos(lat2);
+  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+  return (Math.atan2(y, x) * 180) / Math.PI;
+}
+
+function angleDifference(a, b) {
+  return Math.abs(((((a - b + 540) % 360) + 360) % 360) - 180);
+}
+
+/**
+ * Ближайшая остановка «впереди»: находим ближайшую точку маршрута,
+ * затем из двух соседей выбираем ту, что лучше совпадает с курсом машины.
+ */
+function pickNextStop(vehicle, stops) {
+  if (!Array.isArray(stops) || stops.length < 2) return null;
+
+  let nearestIndex = -1;
+  let bestDistance = Infinity;
+
+  stops.forEach((stop, index) => {
+    if (!Number.isFinite(stop.lat) || !Number.isFinite(stop.lon)) return;
+    const distance = squaredDistance(vehicle, stop);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      nearestIndex = index;
+    }
+  });
+
+  if (nearestIndex < 0) return null;
+
+  const candidates = [];
+  if (nearestIndex + 1 < stops.length) candidates.push(nearestIndex + 1);
+  if (nearestIndex - 1 >= 0) candidates.push(nearestIndex - 1);
+
+  if (!candidates.length) return null;
+  if (candidates.length === 1) return stops[candidates[0]];
+
+  const heading = Number(vehicle.vector);
+  if (!Number.isFinite(heading)) return stops[candidates[0]];
+
+  const [forward, backward] = candidates;
+  return angleDifference(bearingBetween(vehicle, stops[forward]), heading) <=
+    angleDifference(bearingBetween(vehicle, stops[backward]), heading)
+    ? stops[forward]
+    : stops[backward];
+}
+
+function attachNextStops(vehicles) {
+  return vehicles.map((vehicle) => {
+    const nextStop = pickNextStop(vehicle, state.routeStops);
+    return { ...vehicle, nextStopName: nextStop?.name || '' };
+  });
+}
+
 function startPolling() {
   stopPolling(true);
   state.polling = true;
@@ -305,14 +376,15 @@ async function pollOnce() {
       return;
     }
 
-    state.vehicles = vehicles;
-    mapView.updateVehicles(vehicles, transport);
+    state.vehicles = attachNextStops(vehicles);
+    mapView.updateVehicles(state.vehicles, transport);
 
     ui.renderVehicles(
-      vehicles,
+      state.vehicles,
       transport,
       state.selectedVehicleId,
       'На маршруте пока нет машин',
+      { route, stops: state.routeStops },
     );
 
     state.lastPollAt = Date.now();
@@ -447,6 +519,7 @@ function selectVehicle(vehicleId, focus) {
     state.transport,
     state.selectedVehicleId,
     state.routeStops.length ? 'На маршруте пока нет машин' : null,
+    { route: state.route, stops: state.routeStops },
   );
 
   if (focus) mapView.focusVehicle(vehicleId);
@@ -465,6 +538,7 @@ function closeDetails() {
     state.transport,
     null,
     state.routeStops.length ? 'На маршруте пока нет машин' : null,
+    { route: state.route, stops: state.routeStops },
   );
 }
 
@@ -568,6 +642,7 @@ function handleTransportChange(type) {
     type,
     state.selectedVehicleId,
     state.routeStops.length ? 'На маршруте пока нет машин' : null,
+    { route: state.route, stops: state.routeStops },
   );
 }
 

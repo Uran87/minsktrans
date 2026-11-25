@@ -599,8 +599,16 @@ button:focus-visible {
 }
 
 .vehicle-main small {
+  overflow: hidden;
   color: var(--muted);
   font-size: 10.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vehicle-main .vehicle-next {
+  color: var(--accent);
+  font-weight: 600;
 }
 
 .chevron {
