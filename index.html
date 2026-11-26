@@ -86,6 +86,20 @@
           <ul id="vehicles-list" class="vehicles-list"></ul>
         </section>
 
+        <button id="schedule-open" class="btn btn-ghost schedule-open" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M7 3v3M17 3v3M4 9h16M6 5h12a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <span>Полное расписание на день</span>
+        </button>
+
         <section class="settings" aria-label="Настройки данных">
           <div class="block-head">
             <h2>Данные</h2>
@@ -120,6 +134,32 @@
         </header>
         <div id="details-body" class="details-body"></div>
       </aside>
+
+      <div
+        id="schedule-modal"
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="schedule-title"
+        hidden
+      >
+        <div class="modal-backdrop" data-schedule-close></div>
+        <div class="modal-panel">
+          <header class="modal-head">
+            <div class="modal-heading">
+              <span id="schedule-kicker" class="details-kicker">Расписание</span>
+              <h2 id="schedule-title">Полное расписание на день</h2>
+            </div>
+            <button id="schedule-close" class="icon-btn" type="button" aria-label="Закрыть расписание">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+              </svg>
+            </button>
+          </header>
+          <p id="schedule-summary" class="modal-summary" hidden></p>
+          <div id="schedule-body" class="modal-body"></div>
+        </div>
+      </div>
 
       <div id="stop-popup" class="stop-popup" role="dialog" aria-label="Информация об остановке" hidden>
         <button id="stop-popup-close" class="stop-popup-close" type="button" aria-label="Закрыть информацию об остановке">

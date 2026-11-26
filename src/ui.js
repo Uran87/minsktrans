@@ -71,6 +71,13 @@ export function init(config) {
   els.detailsTitle = document.getElementById('details-title');
   els.detailsBody = document.getElementById('details-body');
   els.detailsClose = document.getElementById('details-close');
+  els.scheduleOpen = document.getElementById('schedule-open');
+  els.scheduleModal = document.getElementById('schedule-modal');
+  els.scheduleKicker = document.getElementById('schedule-kicker');
+  els.scheduleTitle = document.getElementById('schedule-title');
+  els.scheduleSummary = document.getElementById('schedule-summary');
+  els.scheduleBody = document.getElementById('schedule-body');
+  els.scheduleClose = document.getElementById('schedule-close');
   els.stopPopup = document.getElementById('stop-popup');
   els.stopPopupBody = document.getElementById('stop-popup-body');
   els.stopPopupClose = document.getElementById('stop-popup-close');
@@ -175,6 +182,15 @@ function wireEvents() {
 
   els.detailsClose.addEventListener('click', () => handlers.onDetailsClose?.());
 
+  els.scheduleOpen?.addEventListener('click', () => handlers.onScheduleOpen?.());
+  els.scheduleClose?.addEventListener('click', closeSchedule);
+  els.scheduleModal?.addEventListener('click', (event) => {
+    if (event.target.closest('[data-schedule-close]')) closeSchedule();
+  });
+  els.scheduleBody?.addEventListener('click', (event) => {
+    if (event.target.closest('[data-schedule-retry]')) handlers.onScheduleRetry?.();
+  });
+
   els.stopPopupClose?.addEventListener('click', () => handlers.onStopPopupClose?.());
 
   els.stopPopupBody.addEventListener('click', (event) => {
@@ -215,6 +231,10 @@ function wireEvents() {
 
   document.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape') return;
+    if (!els.scheduleModal.hidden) {
+      closeSchedule();
+      return;
+    }
     if (!els.stopPopup.hidden) handlers.onStopPopupClose?.();
     if (!els.details.hidden) handlers.onDetailsClose?.();
     setSidebarOpen(false);
@@ -576,6 +596,162 @@ export function closeDetails() {
 
 export function isDetailsOpen() {
   return !els.details.hidden;
+}
+
+/* ------------------------------------------------------------------ */
+/* Полное расписание на день                                           */
+/* ------------------------------------------------------------------ */
+
+export function isScheduleOpen() {
+  return Boolean(els.scheduleModal) && !els.scheduleModal.hidden;
+}
+
+export function closeSchedule() {
+  if (!els.scheduleModal) return;
+  els.scheduleModal.hidden = true;
+  els.scheduleBody.innerHTML = '';
+  els.scheduleSummary.hidden = true;
+  els.scheduleSummary.textContent = '';
+}
+
+function openSchedule() {
+  if (!els.scheduleModal) return;
+  els.scheduleModal.hidden = false;
+  els.scheduleBody.scrollTop = 0;
+}
+
+function scheduleHeading(transport, route) {
+  const typeLabel = TRANSPORT_LABELS[normalizeTransportType(transport)] || 'Транспорт';
+  const routeTitle = String(route ?? '').trim() || '—';
+  els.scheduleKicker.textContent = `${typeLabel} · маршрут №${routeTitle}`;
+}
+
+export function showScheduleLoading({ transport, route }) {
+  if (!els.scheduleModal) return;
+
+  openSchedule();
+  scheduleHeading(transport, route);
+  els.scheduleSummary.hidden = true;
+  els.scheduleBody.innerHTML = `
+    <div class="schedule-skeleton">
+      <span class="skeleton"></span><span class="skeleton"></span>
+      <span class="skeleton"></span><span class="skeleton"></span>
+      <span class="skeleton"></span>
+    </div>`;
+}
+
+function tripStartLabel(trip) {
+  const first = trip?.stops?.[0]?.departures;
+  return formatDeparture(first);
+}
+
+function tripEndLabel(trip) {
+  const last = trip?.stops?.[trip.stops.length - 1]?.departures;
+  return formatDeparture(last);
+}
+
+function tripSortKey(trip) {
+  const label = tripStartLabel(trip);
+  return label === '—' ? '99:99' : String(label);
+}
+
+function renderTrip(trip, stops) {
+  const stopsList = Array.isArray(trip.stops) ? trip.stops : [];
+  const tripNumber = trip.tripNum !== null && trip.tripNum !== undefined && trip.tripNum !== ''
+    ? String(trip.tripNum)
+    : null;
+  const title = tripNumber ? `Рейс ${tripNumber}` : 'Рейс';
+  const start = tripStartLabel(trip);
+  const end = tripEndLabel(trip);
+  const range = start === '—' && end === '—' ? 'время не указано' : `${start} — ${end}`;
+  const stopCount = stopsList.length;
+
+  const stopRows = stopsList
+    .map((stop) => {
+      const info = stops?.get(stop.stopId);
+      const name = info?.name || `Остановка ${stop.stopId}`;
+      return `<li class="trip-stop">
+        <time>${esc(formatDeparture(stop.departures))}</time>
+        <span>${esc(name)}</span>
+      </li>`;
+    })
+    .join('');
+
+  return `<details class="trip-card">
+    <summary class="trip-summary">
+      <span class="trip-num">${esc(title)}</span>
+      <span class="trip-range">${esc(range)}</span>
+      <span class="trip-count">${stopCount} ${esc(pluralize(stopCount, ['остановка', 'остановки', 'остановок']))}</span>
+      <svg class="trip-chevron" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </summary>
+    ${
+      stopRows
+        ? `<ol class="trip-stops">${stopRows}</ol>`
+        : '<p class="trip-empty">Остановки рейса не переданы API.</p>'
+    }
+  </details>`;
+}
+
+export function renderSchedule({ transport, route, trips = [], stops = new Map(), error = null }) {
+  if (!els.scheduleModal) return;
+
+  openSchedule();
+  scheduleHeading(transport, route);
+
+  if (error) {
+    els.scheduleSummary.hidden = true;
+    els.scheduleBody.innerHTML = `
+      <p class="warn">Не удалось загрузить расписание: ${esc(error?.message || 'неизвестная ошибка')}</p>
+      <button type="button" class="btn btn-ghost btn-sm" data-schedule-retry>Повторить</button>`;
+    return;
+  }
+
+  const groups = new Map();
+  for (const trip of trips) {
+    const direction =
+      trip.direction === null || trip.direction === undefined || trip.direction === ''
+        ? 'none'
+        : String(trip.direction);
+    if (!groups.has(direction)) groups.set(direction, []);
+    groups.get(direction).push(trip);
+  }
+
+  const orderedGroups = [...groups.entries()].sort(([a], [b]) => {
+    if (a === b) return 0;
+    if (a === 'none') return 1;
+    if (b === 'none') return -1;
+    return Number(a) - Number(b);
+  });
+
+  const tripCount = trips.length;
+  const today = new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+  els.scheduleSummary.hidden = false;
+  els.scheduleSummary.textContent = `${tripCount} ${pluralize(tripCount, ['рейс', 'рейса', 'рейсов'])} на ${today}`;
+
+  if (!tripCount) {
+    els.scheduleBody.innerHTML = '<p class="empty-note">На этот день рейсы не найдены.</p>';
+    return;
+  }
+
+  els.scheduleBody.innerHTML = orderedGroups
+    .map(([direction, groupTrips]) => {
+      const sortedTrips = [...groupTrips].sort((a, b) =>
+        tripSortKey(a).localeCompare(tripSortKey(b)),
+      );
+      const directionName = direction === 'none' ? 'Все рейсы' : directionLabel(Number(direction));
+
+      return `<section class="schedule-group">
+        <div class="schedule-group-head">
+          <h3>${esc(directionName)}</h3>
+          <span>${sortedTrips.length} ${esc(pluralize(sortedTrips.length, ['рейс', 'рейса', 'рейсов']))}</span>
+        </div>
+        ${sortedTrips.map((trip) => renderTrip(trip, stops)).join('')}
+      </section>`;
+    })
+    .join('');
 }
 
 /* ------------------------------------------------------------------ */

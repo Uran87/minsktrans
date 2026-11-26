@@ -1126,6 +1126,239 @@ button:focus-visible {
 }
 
 /* ------------------------------------------------------------------ */
+/* Полное расписание на день                                           */
+/* ------------------------------------------------------------------ */
+
+.schedule-open {
+  width: 100%;
+  height: 42px;
+  font-size: 12.5px;
+}
+
+.schedule-open svg {
+  width: 16px;
+  height: 16px;
+}
+
+.modal {
+  position: absolute;
+  z-index: 60;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.62);
+  backdrop-filter: blur(3px);
+  animation: modal-fade 0.18s ease-out;
+}
+
+@keyframes modal-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+}
+
+.modal-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(620px, calc(100vw - 32px));
+  max-height: min(82vh, 760px);
+  max-height: min(82dvh, 760px);
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: 22px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(22px) saturate(150%);
+  animation: modal-in 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 18px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-heading {
+  min-width: 0;
+}
+
+.modal-head h2 {
+  margin: 4px 0 0;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.modal-summary {
+  margin: 0;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.modal-body {
+  min-height: 0;
+  padding: 14px 18px 18px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.25) transparent;
+}
+
+.schedule-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.schedule-skeleton .skeleton {
+  height: 44px;
+  border-radius: 12px;
+}
+
+.schedule-group + .schedule-group {
+  margin-top: 18px;
+}
+
+.schedule-group-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.schedule-group-head h3 {
+  margin: 0;
+  color: var(--muted-2);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.schedule-group-head span {
+  color: var(--muted-2);
+  font-size: 10.5px;
+}
+
+.trip-card {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(2, 6, 23, 0.35);
+}
+
+.trip-card + .trip-card {
+  margin-top: 6px;
+}
+
+.trip-card[open] {
+  border-color: var(--border-strong);
+  background: rgba(2, 6, 23, 0.5);
+}
+
+.trip-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  font-size: 12px;
+  list-style: none;
+  cursor: pointer;
+  transition: background 0.18s;
+}
+
+.trip-summary::-webkit-details-marker {
+  display: none;
+}
+
+.trip-summary:hover {
+  background: rgba(148, 163, 184, 0.06);
+}
+
+.trip-num {
+  flex: none;
+  font-weight: 700;
+}
+
+.trip-range {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.trip-count {
+  margin-left: auto;
+  color: var(--muted-2);
+  font-size: 10.5px;
+}
+
+.trip-chevron {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--muted-2);
+  transition: transform 0.18s;
+}
+
+.trip-card[open] .trip-chevron {
+  transform: rotate(180deg);
+}
+
+.trip-stops {
+  margin: 0;
+  padding: 6px 12px 10px;
+  border-top: 1px solid var(--border);
+  list-style: none;
+}
+
+.trip-stop {
+  display: flex;
+  gap: 10px;
+  padding: 4px 0;
+  font-size: 11.5px;
+}
+
+.trip-stop time {
+  flex: none;
+  width: 42px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.trip-stop span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trip-empty {
+  margin: 0;
+  padding: 4px 12px 10px;
+  border-top: 1px solid var(--border);
+  color: var(--muted-2);
+  font-size: 11px;
+}
+
+/* ------------------------------------------------------------------ */
 /* Попап остановки                                                     */
 /* ------------------------------------------------------------------ */
 
@@ -1730,6 +1963,20 @@ button.score-main:hover .score-route strong {
 
   .details-head h2 {
     font-size: 19px;
+  }
+
+  .modal {
+    padding: 12px;
+  }
+
+  .modal-panel {
+    max-height: calc(100vh - 24px);
+    max-height: calc(100dvh - 24px);
+    border-radius: 18px;
+  }
+
+  .trip-count {
+    display: none;
   }
 }
 

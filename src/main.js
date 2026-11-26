@@ -39,6 +39,7 @@ const state = {
   selectedVehicleId: null,
   detailsVehicleId: null,
   detailsToken: 0,
+  scheduleToken: 0,
   scoreboardToken: 0,
   dataGeneration: 0,
   requestId: 0,
@@ -593,6 +594,40 @@ async function openDetails(vehicleId, transportHint = null) {
   }
 }
 
+async function handleScheduleOpen() {
+  const route = String(state.route || '').trim();
+  if (!route) {
+    ui.toast('Сначала выберите маршрут', 'error');
+    return;
+  }
+
+  const transport = state.transport;
+  const token = ++state.scheduleToken;
+
+  ui.showScheduleLoading({ transport, route });
+
+  try {
+    const [schedule, stopsMap] = await Promise.all([
+      api.getScheduleDay({ transport, route }),
+      ensureStops().catch(() => state.stops),
+    ]);
+
+    if (token !== state.scheduleToken || !ui.isScheduleOpen()) return;
+
+    ui.renderSchedule({
+      transport,
+      route,
+      trips: schedule?.trips || [],
+      stops: stopsMap || state.stops,
+    });
+  } catch (error) {
+    if (token !== state.scheduleToken || !ui.isScheduleOpen()) return;
+
+    console.warn('[schedule]', error);
+    ui.renderSchedule({ transport, route, trips: [], stops: state.stops, error });
+  }
+}
+
 function selectVehicle(vehicleId, focus, transportHint = null) {
   closeStopPopup();
   state.selectedVehicleId = String(vehicleId);
@@ -687,6 +722,11 @@ function closeDetails() {
   renderRouteVehicles();
 }
 
+function closeSchedule() {
+  state.scheduleToken += 1;
+  ui.closeSchedule();
+}
+
 /* ------------------------------------------------------------------ */
 /* Остановки                                                           */
 /* ------------------------------------------------------------------ */
@@ -763,6 +803,7 @@ function handleSubmit({ transport, route }) {
   }
 
   closeDetails();
+  if (ui.isScheduleOpen()) closeSchedule();
   showRoute();
 }
 
@@ -776,6 +817,7 @@ function handleTransportChange(type) {
 
   closeStopPopup();
   if (ui.isDetailsOpen()) closeDetails();
+  if (ui.isScheduleOpen()) closeSchedule();
 
   state.routeVehicles = [];
   state.routeGeometry = null;
@@ -897,6 +939,8 @@ ui.init({
     onVehicleSelect: (vehicleId) => selectVehicle(vehicleId, true),
     onDetailsClose: closeDetails,
     onDetailsRetry: (vehicleId) => openDetails(vehicleId),
+    onScheduleOpen: handleScheduleOpen,
+    onScheduleRetry: handleScheduleOpen,
     onStopSelect: handleTripStopSelect,
     onStopPopupClose: closeStopPopup,
     onScoreboardRefresh: (stopId) => loadScoreboard(stopId),
