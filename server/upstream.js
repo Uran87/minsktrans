@@ -1,5 +1,5 @@
 import { config } from './config.js';
-import { ApiError, unwrapStatus } from './normalize.js';
+import { ApiError, apiTransportValue, unwrapStatus } from './normalize.js';
 
 function buildUrl(path, params = {}) {
   const url = new URL(`${config.apiOrigin}${path}`);
@@ -69,11 +69,17 @@ export function fetchScoreboard(stopId) {
 }
 
 export function fetchSchedule(transport, route) {
-  return fetchUpstream('/api/v1/schedule', { transport, route });
+  return fetchUpstream('/api/v1/schedule', {
+    transport: apiTransportValue(transport),
+    route,
+  });
 }
 
 export function fetchScheduleDay(transport, route) {
-  return fetchUpstream('/api/v1/scheduleDay', { transport, route });
+  return fetchUpstream('/api/v1/scheduleDay', {
+    transport: apiTransportValue(transport),
+    route,
+  });
 }
 
 export function fetchVehicles() {
@@ -81,7 +87,11 @@ export function fetchVehicles() {
 }
 
 export function fetchGeoInfoMar(transport, route, options = {}) {
-  return fetchUpstream('/api/v1/geoinfomar', { transport, route }, options);
+  return fetchUpstream(
+    '/api/v1/geoinfomar',
+    { transport: apiTransportValue(transport), route },
+    options,
+  );
 }
 
 export function fetchRaw(path) {

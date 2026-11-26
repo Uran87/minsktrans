@@ -112,6 +112,15 @@ export function transportFromMType(value) {
   return '';
 }
 
+/** Значение transport для API: mType «А», «Т», «#». */
+export function apiTransportValue(transport) {
+  const normalized = String(transport ?? '').trim().toLowerCase();
+  if (normalized === 'bus') return 'А';
+  if (normalized === 'trolley') return 'Т';
+  if (normalized === 'tram') return '#';
+  return transport;
+}
+
 function extractStopIds(node) {
   if (Array.isArray(node)) {
     return node

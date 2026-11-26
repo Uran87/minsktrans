@@ -9,6 +9,7 @@
  */
 
 import * as mockApi from './mock.js';
+import { apiTransportValue } from './constants.js';
 
 const API_BASE = (import.meta.env.VITE_API_BASE || '/api/v1').replace(/\/+$/, '');
 const LOCAL_API_BASE = (import.meta.env.VITE_LOCAL_API_BASE || '/api').replace(/\/+$/, '');
@@ -435,7 +436,7 @@ export function normalizeScoreboard(payload) {
 export async function getGeoInfo({ transport, route }) {
   const raw = mockEnabled
     ? await mockApi.geoInfo({ transport, route })
-    : await fetchJson('/geoinfomar', { transport, route });
+    : await fetchJson('/geoinfomar', { transport: apiTransportValue(transport), route });
 
   return normalizeVehicles(raw);
 }
@@ -535,7 +536,7 @@ export async function getVehicleState(vehicleId) {
 export async function getScheduleDay({ transport, route }) {
   const raw = mockEnabled
     ? await mockApi.scheduleDay({ transport, route })
-    : await fetchJson('/scheduleDay', { transport, route });
+    : await fetchJson('/scheduleDay', { transport: apiTransportValue(transport), route });
 
   return normalizeScheduleDay(raw);
 }

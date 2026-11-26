@@ -33,7 +33,6 @@ import {
   fetchVehicles,
 } from './upstream.js';
 import { errorMessage, mapLimit } from './util.js';
-import { filterVehiclesByTransport, loadVehicleTypeMap } from './vehicle-types.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -382,16 +381,11 @@ export async function syncOperators(db) {
 
   let observations = 0;
   const counts = new Map();
-  const typeMap = loadVehicleTypeMap(db);
 
   await mapLimit(routes, config.syncConcurrency, async (route) => {
     try {
       const payload = await fetchGeoInfoMar(route.mtype, route.numl);
-      const vehicles = filterVehiclesByTransport(
-        normalizeGeoInfo(payload),
-        typeMap,
-        route.mtype,
-      );
+      const vehicles = normalizeGeoInfo(payload);
       for (const vehicle of vehicles) {
         const parkName = parks.get(vehicle.vehicleId);
         if (!parkName) continue;
@@ -487,16 +481,11 @@ export async function collectTraces(db) {
   let errors = 0;
   const now = Date.now();
   const createdAt = new Date(now).toISOString();
-  const typeMap = loadVehicleTypeMap(db);
 
   await mapLimit(routes, config.traceConcurrency, async (route) => {
     try {
       const payload = await fetchGeoInfoMar(route.mtype, route.numl);
-      const vehicles = filterVehiclesByTransport(
-        normalizeGeoInfo(payload),
-        typeMap,
-        route.mtype,
-      );
+      const vehicles = normalizeGeoInfo(payload);
       const insert = db.prepare(
         `INSERT OR IGNORE INTO gps_samples
            (route_id, direction, vehicle_id, lat, lon, vector, ts, created_at)

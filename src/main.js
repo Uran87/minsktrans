@@ -251,17 +251,11 @@ function vehiclesForRoute(vehicles, route) {
   return vehicles.filter((vehicle) => !vehicle.route || String(vehicle.route) === target);
 }
 
-function vehicleMatchesTransport(vehicle) {
-  const type = String(vehicle.mtype || '').trim().toLowerCase();
-  return !type || type === state.transport;
-}
-
 const ROUTE_VEHICLES_MIN_ZOOM = 12;
 const ALL_VEHICLES_MIN_ZOOM = 14;
 
 function updateVehicleLayer() {
   const zoom = mapView.getZoom();
-  const fleet = state.vehicles.filter(vehicleMatchesTransport);
 
   if (zoom < ROUTE_VEHICLES_MIN_ZOOM) {
     mapView.updateVehicles([], state.transport);
@@ -269,12 +263,12 @@ function updateVehicleLayer() {
   }
 
   if (zoom < ALL_VEHICLES_MIN_ZOOM) {
-    const vehicles = state.route ? vehiclesForRoute(fleet, state.route) : [];
+    const vehicles = state.route ? vehiclesForRoute(state.vehicles, state.route) : [];
     mapView.updateVehicles(vehicles, state.transport);
     return;
   }
 
-  mapView.updateVehicles(fleet, state.transport);
+  mapView.updateVehicles(state.vehicles, state.transport);
 }
 
 function renderRouteVehicles() {
@@ -468,7 +462,7 @@ async function pollOnce() {
       }
     }
 
-    state.vehicles = vehicles.filter(vehicleMatchesTransport);
+    state.vehicles = vehicles;
     state.fleetRoutes = fleet.routes;
     state.routeVehicles = state.routeStops.length
       ? attachNextStops(vehiclesForRoute(state.vehicles, state.route))

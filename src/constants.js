@@ -27,6 +27,15 @@ export function normalizeTransportType(value) {
   return null;
 }
 
+/** Значения transport для API: mType «А», «Т», «#». */
+export function apiTransportValue(type) {
+  const normalized = normalizeTransportType(type);
+  if (normalized === 'bus') return 'А';
+  if (normalized === 'trolley') return 'Т';
+  if (normalized === 'tram') return '#';
+  return type;
+}
+
 /**
  * mType из /scoreboard: "А" — автобус, "Т" — троллейбус, "#" — трамвай.
  * Дополнительно поддерживаем текстовые варианты.
