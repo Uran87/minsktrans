@@ -65,22 +65,21 @@ const iconCache = new Map();
 /* ------------------------------------------------------------------ */
 
 function vehicleIconSvg(color, selected) {
-  const ring = selected ? '#f8fafc' : 'rgba(255,255,255,0.7)';
-  const ringWidth = selected ? 2.5 : 1.5;
-  const glowOpacity = selected ? 0.4 : 0.2;
+  const ring = selected ? '#f8fafc' : 'rgba(255,255,255,0.55)';
+  const ringWidth = selected ? 3 : 1.5;
+  const glowOpacity = selected ? 0.4 : 0.18;
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44">
-    <circle cx="22" cy="22" r="21" fill="${color}" fill-opacity="${glowOpacity}"/>
-    <circle cx="22" cy="22" r="17.5" fill="${color}" stroke="#0b1220" stroke-width="1.5"/>
-    <circle cx="22" cy="22" r="17.5" fill="none" stroke="${ring}" stroke-width="${ringWidth}" stroke-opacity="0.85"/>
-    <path d="M22 1.5 L27 10.5 L17 10.5 Z"
-          fill="#0b1220" stroke="${ring}" stroke-width="1.2" stroke-linejoin="round"/>
+    <circle cx="22" cy="22" r="20" fill="${color}" fill-opacity="${glowOpacity}"/>
+    <circle cx="22" cy="22" r="19" fill="none" stroke="${ring}" stroke-width="${ringWidth}"/>
+    <path d="M22 7 L32.5 31 L22 26.2 L11.5 31 Z"
+          fill="${color}" stroke="#0b1220" stroke-width="1.5" stroke-linejoin="round"/>
   </svg>`;
 }
 
 function routeLabelFont(routeNumber) {
   const length = String(routeNumber ?? '').trim().length;
-  const size = length >= 3 ? 9 : length === 2 ? 11 : 12;
+  const size = length >= 3 ? 8 : length === 2 ? 10 : 12;
   return `800 ${size}px Inter, "Segoe UI", system-ui, sans-serif`;
 }
 
