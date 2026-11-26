@@ -178,39 +178,16 @@ button:focus-visible {
 .brand {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
 }
 
-.brand-logo {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
-  background: var(--accent);
-  color: #07101f;
-  font-size: 20px;
-  font-weight: 800;
-  box-shadow: 0 12px 30px var(--accent-glow);
-  transition: background 0.3s, box-shadow 0.3s;
-}
-
-.brand-text {
-  min-width: 0;
-}
-
-.brand-text h1 {
+.brand h1 {
   margin: 0;
   font-size: 16px;
   font-weight: 800;
   letter-spacing: -0.01em;
-}
-
-.brand-text p {
-  margin: 2px 0 0;
-  font-size: 11px;
-  color: var(--muted);
+  line-height: 1.2;
 }
 
 .icon-btn {
@@ -1648,6 +1625,12 @@ button.score-main:hover .score-route strong {
 .hamburger svg {
   width: 20px;
   height: 20px;
+}
+
+.hamburger.is-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 /* ------------------------------------------------------------------ */

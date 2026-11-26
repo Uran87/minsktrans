@@ -394,6 +394,7 @@ export function renderVehicles(vehicles, transport, selectedId = null, emptyText
 
 export function setSidebarOpen(open) {
   els.sidebar.classList.toggle('is-open', Boolean(open));
+  els.hamburger.classList.toggle('is-hidden', Boolean(open));
 }
 
 /* ------------------------------------------------------------------ */
