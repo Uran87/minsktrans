@@ -27,12 +27,12 @@ export function normalizeTransportType(value) {
   return null;
 }
 
-/** Значения transport для API: mType «А», «Т», «#». */
+/** Значения transport для API: bus, trolleybus, tram, routetaxi. */
 export function apiTransportValue(type) {
   const normalized = normalizeTransportType(type);
-  if (normalized === 'bus') return 'А';
-  if (normalized === 'trolley') return 'Т';
-  if (normalized === 'tram') return '#';
+  if (normalized === 'bus') return 'bus';
+  if (normalized === 'trolley') return 'trolleybus';
+  if (normalized === 'tram') return 'tram';
   return type;
 }
 

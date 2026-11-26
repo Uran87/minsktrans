@@ -160,13 +160,17 @@ Backend также кэширует live-ответы на несколько с
 
 | Метод | Endpoint | Использование |
 |---|---|---|
-| GET | `/geoinfomar?transport={mType}&route={Numl}` | координаты машин, поллинг раз в 30 с и сбор GPS-треков |
+| GET | `/geoinfomar?transport={transport}&route={Numl}` | координаты машин, поллинг раз в 30 с и сбор GPS-треков |
 | GET | `/stops` | справочник остановок, ночная синхронизация |
 | GET | `/vehicleState?id={vehicleId}` | госномер, рейс, направление, порядок остановок |
-| GET | `/schedule?transport={mType}&route={Numl}` | оба направления, остановки и даты действия |
-| GET | `/scheduleDay?transport={mType}&route={marNum1}` | расписание на день, fallback для направлений |
+| GET | `/schedule?transport={transport}&route={Numl}` | оба направления, остановки и даты действия |
+| GET | `/scheduleDay?transport={transport}&route={Numl}` | расписание на день, fallback для направлений |
 | GET | `/scoreboard?idStop={stopId}&txt=false` | табло остановки и обнаружение маршрутов |
 | GET | `/vehicles`, `/vehicle?id=` | справочник ТС, модель, госномер, `parkName` |
+
+Значения `transport`: `bus`, `trolleybus`, `tram`, `routetaxi`. В ответах `/scoreboard` тип маршрута приходит в `mType` как `А`, `Т`, `#`.
+
+Реальные примеры запросов и ответов: `docs/api-real-samples.md`.
 
 Ответы поддерживаются как в обёртке `StatusResponse` (`{ status, data }`), так и «голым» массивом/объектом.
 Все live-запросы проксируются backend без сохранения ситуационных данных (только короткий кэш в памяти).
@@ -257,6 +261,8 @@ Backend также кэширует live-ответы на несколько с
 │   └── dev-seed.js             # синтетический маршрут для проверки геометрии
 ├── docker/
 │   └── nginx.conf.template     # статика + прокси /api на backend
+├── docs/
+│   └── api-real-samples.md     # реальные примеры geoinfomar и transport-значений
 ├── Dockerfile                  # build → api (Node) / runtime (nginx)
 ├── docker-compose.yml          # api + web + volume minsktrans-data
 ├── vite.config.js
@@ -294,8 +300,8 @@ Backend также кэширует live-ответы на несколько с
 - **Все ТС на карте**: `/api/live/vehicles` агрегирует `/geoinfomar` по всем маршрутам выбранного
   типа в памяти backend и обновляет снимок каждые `LIVE_REFRESH_MS`. Браузер делает один запрос
   к backend вместо запроса на каждый маршрут.
-- **Параметр `transport`**: наружу в API передаются `mType` — `А` (автобус), `Т` (троллейбус),
-  `#` (трамвай). Внутри приложения и в БД используются `bus/trolley/tram`.
+- **Параметр `transport`**: наружу в API передаются `bus`, `trolleybus`, `tram` (и `routetaxi`).
+  В `mType` табло используются коды `А`, `Т`, `#`; они переводятся во внутренние `bus/trolley/tram`.
 - **Геометрия хранится версиями**: `geometry_versions` + `route_variants.current_geometry_id`.
   При первом полном проезде placeholder заменяется на `provisional`, после недельной агрегации — на `stable`.
 - **SQLite**: файл в Docker-volume `/data/minsktrans.db`, режим WAL. Схема создаётся автоматически при старте.
