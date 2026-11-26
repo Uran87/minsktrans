@@ -442,27 +442,34 @@ export async function getGeoInfo({ transport, route }) {
 }
 
 /**
- * Все ТС выбранного типа со всех маршрутов (backend агрегирует geoinfomar).
+ * Все ТС всех типов со всех маршрутов (backend агрегирует geoinfomar).
  */
-export async function getAllVehicles({ transport }) {
+export async function getAllVehicles() {
   if (mockEnabled) {
-    const raw = await mockApi.geoInfo({ transport });
-    const vehicles = normalizeVehicles(raw).map((vehicle) => ({
-      ...vehicle,
-      route: '1',
-      mtype: transport,
-    }));
+    const types = ['bus', 'trolleybus', 'tram'];
+    const vehicles = [];
+
+    for (const transport of types) {
+      const raw = await mockApi.geoInfo({ transport });
+      for (const vehicle of normalizeVehicles(raw)) {
+        vehicles.push({
+          ...vehicle,
+          route: '1',
+          mtype: transport,
+        });
+      }
+    }
 
     return {
       vehicles,
-      routes: 1,
+      routes: types.length,
       errors: 0,
       stale: false,
       updatedAt: new Date().toISOString(),
     };
   }
 
-  const params = new URLSearchParams({ transport: String(transport) });
+  const params = new URLSearchParams({ transport: 'all' });
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), LOCAL_LIVE_TIMEOUT);
 
@@ -496,7 +503,7 @@ export async function getAllVehicles({ transport }) {
               lon,
               vector: Number.isFinite(Number(vehicle.vector)) ? Number(vehicle.vector) : 0,
               route: String(vehicle.route ?? '').trim(),
-              mtype: String(vehicle.mtype ?? transport).trim(),
+              mtype: String(vehicle.mtype ?? '').trim(),
             };
           })
           .filter(Boolean)

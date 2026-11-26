@@ -3,7 +3,7 @@ import { pathToFileURL } from 'node:url';
 import { config } from './config.js';
 import { openDatabase } from './db.js';
 import { jobRegistry, runJob } from './jobs.js';
-import { getLiveSnapshot, getLiveSummary, startLivePoller, stopLivePoller } from './live.js';
+import { getLiveSnapshot, getAllLiveSnapshot, getLiveSummary, startLivePoller, stopLivePoller } from './live.js';
 import { startScheduler, stopScheduler } from './scheduler.js';
 import { errorMessage } from './util.js';
 
@@ -278,13 +278,19 @@ async function handle(db, req, res) {
   }
 
   if (path === '/api/live/vehicles') {
-    const transport = (url.searchParams.get('transport') || 'bus').trim();
-    if (!['bus', 'trolleybus', 'tram'].includes(transport)) {
-      sendError(res, 400, 'Неизвестный тип транспорта');
-      return;
-    }
+    const transport = (url.searchParams.get('transport') || 'all').trim();
 
     try {
+      if (transport === 'all') {
+        sendJson(res, 200, await getAllLiveSnapshot(db));
+        return;
+      }
+
+      if (!['bus', 'trolleybus', 'tram'].includes(transport)) {
+        sendError(res, 400, 'Неизвестный тип транспорта');
+        return;
+      }
+
       sendJson(res, 200, await getLiveSnapshot(db, transport));
     } catch (error) {
       sendError(res, 502, errorMessage(error));

@@ -60,12 +60,8 @@ function loadPrefs() {
 
   try {
     const stored = JSON.parse(localStorage.getItem(PREFS_KEY) || '{}');
-    const storedTransport = normalizeTransportType(stored.transport);
     return {
-      transport:
-        storedTransport && TRANSPORT_TYPES.includes(storedTransport)
-          ? storedTransport
-          : defaults.transport,
+      transport: 'bus',
       route: '',
       layer: VALID_LAYERS.includes(stored.layer) ? stored.layer : defaults.layer,
       mock: typeof stored.mock === 'boolean' ? stored.mock : defaults.mock,
@@ -250,9 +246,17 @@ function drawRoute(orderIds, geometry = state.routeGeometry) {
   mapView.setRoute(state.routeStops, state.transport, geometry);
 }
 
-function vehiclesForRoute(vehicles, route) {
-  const target = String(route ?? '');
-  return vehicles.filter((vehicle) => !vehicle.route || String(vehicle.route) === target);
+function vehiclesForRoute(vehicles, route, transport = state.transport) {
+  const targetRoute = String(route ?? '');
+  const targetType = normalizeTransportType(transport) || transport;
+
+  return vehicles.filter((vehicle) => {
+    if (vehicle.route && String(vehicle.route) !== targetRoute) return false;
+
+    const vehicleType =
+      normalizeTransportType(vehicle.mtype) || normalizeTransportType(vehicle.tsType);
+    return !vehicleType || vehicleType === targetType;
+  });
 }
 
 const ROUTE_VEHICLES_MIN_ZOOM = 12;
@@ -443,7 +447,7 @@ async function pollOnce() {
   state.inFlight = true;
 
   try {
-    const fleet = await api.getAllVehicles({ transport });
+    const fleet = await api.getAllVehicles();
 
     if (generation !== state.dataGeneration || transport !== state.transport) {
       return;
@@ -600,6 +604,18 @@ function selectVehicle(vehicleId, focus, transportHint = null) {
   openDetails(vehicleId, transportHint);
 }
 
+function handleVehicleClick(vehicleId) {
+  const vehicle = state.vehicles.find(
+    (item) => String(item.vehicleId) === String(vehicleId),
+  );
+  const type =
+    normalizeTransportType(vehicle?.mtype) ||
+    normalizeTransportType(vehicle?.tsType) ||
+    null;
+
+  selectVehicle(vehicleId, false, type);
+}
+
 async function findVehicleCoordinate(transport, route, vehicleId) {
   try {
     const vehicles = await api.getGeoInfo({ transport, route });
@@ -632,11 +648,7 @@ async function selectScoreboardVehicle(vehicleId, mType, routeNuml) {
   loadRouteOptions(type);
 
   if (typeChanged) {
-    state.vehicles = [];
-    state.routeVehicles = [];
-    state.fleetRoutes = 0;
     state.routeGeometry = null;
-    mapView.clearVehicles();
   }
 
   state.selectedVehicleId = String(vehicleId);
@@ -765,11 +777,8 @@ function handleTransportChange(type) {
   closeStopPopup();
   if (ui.isDetailsOpen()) closeDetails();
 
-  state.vehicles = [];
   state.routeVehicles = [];
   state.routeGeometry = null;
-  state.fleetRoutes = 0;
-  mapView.clearVehicles();
 
   if (hadRoute) {
     showRoute();
@@ -778,9 +787,8 @@ function handleTransportChange(type) {
     state.routeStopIds = [];
     mapView.clearRoute();
     renderRouteVehicles();
+    updateVehicleLayer();
   }
-
-  pollOnce();
 }
 
 function handleLayerChange(layer) {
@@ -898,7 +906,7 @@ ui.init({
 });
 
 mapView.initMap('map', {
-  onVehicleClick: (vehicleId) => selectVehicle(vehicleId, false),
+  onVehicleClick: handleVehicleClick,
   onStopClick: handleStopClick,
   onEmptyClick: closeStopPopup,
   onZoomChange: updateVehicleLayer,

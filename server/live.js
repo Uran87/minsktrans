@@ -162,7 +162,7 @@ export function stopLivePoller() {
   timer = null;
 }
 
-export function getLiveSnapshot(db, transport) {
+export async function getLiveSnapshot(db, transport) {
   const snapshot = snapshots.get(transport);
   const fresh =
     snapshot &&
@@ -171,6 +171,35 @@ export function getLiveSnapshot(db, transport) {
 
   if (fresh) return Promise.resolve(snapshot);
   return refreshTransport(db, transport);
+}
+
+export async function getAllLiveSnapshot(db) {
+  const snapshotsList = await Promise.all(
+    TRANSPORTS.map((transport) => getLiveSnapshot(db, transport)),
+  );
+
+  const unique = new Map();
+  for (const snapshot of snapshotsList) {
+    for (const vehicle of snapshot.vehicles) {
+      unique.set(String(vehicle.vehicleId), vehicle);
+    }
+  }
+
+  const updatedAtMs = Math.max(
+    0,
+    ...snapshotsList.map((snapshot) => snapshot.updatedAtMs || 0),
+  );
+  const now = updatedAtMs || Date.now();
+
+  return {
+    transport: 'all',
+    updatedAt: new Date(now).toISOString(),
+    updatedAtMs: now,
+    routes: snapshotsList.reduce((sum, snapshot) => sum + (snapshot.routes || 0), 0),
+    vehicles: [...unique.values()],
+    errors: snapshotsList.reduce((sum, snapshot) => sum + (snapshot.errors || 0), 0),
+    stale: snapshotsList.some((snapshot) => snapshot.stale),
+  };
 }
 
 export function getLiveSummary() {

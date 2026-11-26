@@ -685,13 +685,19 @@ function applySelection(entry, selected) {
 export function updateVehicles(vehicles, transport) {
   if (!vehicleSource) return;
 
-  const type = normalizeTransportType(transport) || transport;
-  const color = TRANSPORT_COLORS[type] || TRANSPORT_COLORS.bus;
+  const defaultType = normalizeTransportType(transport) || transport;
+  const defaultColor = TRANSPORT_COLORS[defaultType] || TRANSPORT_COLORS.bus;
   const seen = new Set();
 
   for (const vehicle of vehicles) {
     const key = String(vehicle.vehicleId);
     seen.add(key);
+
+    const vehicleType =
+      normalizeTransportType(vehicle.mtype) ||
+      normalizeTransportType(vehicle.tsType) ||
+      defaultType;
+    const color = TRANSPORT_COLORS[vehicleType] || defaultColor;
 
     let entry = vehicleEntries.get(key);
     const coordinate = fromLonLat([vehicle.lon, vehicle.lat]);
