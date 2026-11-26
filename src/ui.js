@@ -62,6 +62,7 @@ export function init(config) {
   els.routeMenu = document.getElementById('route-menu');
   els.vehiclesBlock = document.getElementById('vehicles-block');
   els.vehiclesBadge = document.getElementById('vehicles-badge');
+  els.vehiclesRoute = document.getElementById('vehicles-route');
   els.vehiclesList = document.getElementById('vehicles-list');
   els.layerToggle = document.getElementById('layer-toggle');
   els.mockToggle = document.getElementById('mock-toggle');
@@ -377,9 +378,15 @@ export function renderVehicles(vehicles, transport, selectedId = null, emptyText
   const color = TRANSPORT_COLORS[type] || TRANSPORT_COLORS.bus;
   const typeLabel = TRANSPORT_LABELS[type] || 'Транспорт';
   const routeNumber = context.route ? String(context.route).trim() : '';
+  const routeName = context.routeName ? String(context.routeName).trim() : '';
   const routeTitle = routeNumber ? `${typeLabel} №${routeNumber}` : typeLabel;
+  const routeCaption =
+    routeNumber && routeName && routeName !== routeTitle
+      ? `${routeTitle} · ${routeName}`
+      : routeTitle;
 
   els.vehiclesBadge.textContent = String(count);
+  if (els.vehiclesRoute) els.vehiclesRoute.textContent = routeCaption;
 
   if (!count) {
     els.vehiclesList.innerHTML = `<li class="empty">${esc(
@@ -392,14 +399,19 @@ export function renderVehicles(vehicles, transport, selectedId = null, emptyText
     .map((vehicle) => {
       const id = String(vehicle.vehicleId);
       const active = selectedId !== null && String(selectedId) === id;
+      const gosnum = String(vehicle.gosnum ?? '').trim();
+      const direction = directionLabel(vehicle.direction);
+
       return `<li>
         <button type="button" class="vehicle-item${active ? ' is-active' : ''}"
-                data-vehicle-id="${esc(id)}" title="Борт ${esc(id)}"
-                aria-label="Открыть карточку: ${esc(routeTitle)}, борт ${esc(id)}">
+                data-vehicle-id="${esc(id)}" title="${esc(routeTitle)}"
+                aria-label="Открыть карточку: ${esc(routeTitle)}, ${esc(direction)}${gosnum ? `, госномер ${esc(gosnum)}` : ''}">
           <span class="vehicle-dot" style="--dot-color:${color}" aria-hidden="true"></span>
           <span class="vehicle-main">
-            <strong>${esc(routeTitle)}</strong>
-            <small>${esc(directionLabel(vehicle.direction))}</small>
+            <span class="vehicle-line">
+              <strong class="vehicle-direction">${esc(direction)}</strong>
+              ${gosnum ? `<span class="vehicle-plate">${esc(gosnum)}</span>` : ''}
+            </span>
             ${vehicle.nextStopName ? `<small class="vehicle-next" title="Следующая остановка">→ ${esc(vehicle.nextStopName)}</small>` : ''}
           </span>
           <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true">

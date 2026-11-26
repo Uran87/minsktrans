@@ -87,6 +87,8 @@ async function refreshTransport(db, transport) {
     const unique = new Map();
     for (const vehicle of vehicles) unique.set(String(vehicle.vehicleId), vehicle);
 
+    const list = enrichWithVehicleInfo(db, [...unique.values()]);
+
     const now = Date.now();
     const allFailed = errors === routes.length;
 
@@ -101,7 +103,7 @@ async function refreshTransport(db, transport) {
       updatedAt: new Date(now).toISOString(),
       updatedAtMs: now,
       routes: routes.length,
-      vehicles: [...unique.values()],
+      vehicles: list,
       errors,
       stale: errors > 0,
     };
@@ -112,6 +114,49 @@ async function refreshTransport(db, transport) {
 
   attempts.set(transport, attempt);
   return attempt;
+}
+
+/**
+ * Дополняет live-снимок справочными данными ТС из SQLite
+ * (госномер, модель, парк), чтобы список «Машины на маршруте»
+ * не делал отдельный запрос на каждую машину.
+ */
+function enrichWithVehicleInfo(db, vehicles) {
+  if (!vehicles.length) return vehicles;
+
+  const ids = [...new Set(vehicles.map((vehicle) => Number(vehicle.vehicleId)))].filter(
+    (id) => Number.isFinite(id),
+  );
+  if (!ids.length) return vehicles;
+
+  const byId = new Map();
+  const chunkSize = 400;
+
+  for (let offset = 0; offset < ids.length; offset += chunkSize) {
+    const chunk = ids.slice(offset, offset + chunkSize);
+    const placeholders = chunk.map(() => '?').join(', ');
+    const rows = db
+      .prepare(
+        `SELECT vehicle_id, gosnum, garnum, model, park_name
+           FROM vehicles
+          WHERE vehicle_id IN (${placeholders})`,
+      )
+      .all(...chunk);
+
+    for (const row of rows) byId.set(Number(row.vehicle_id), row);
+  }
+
+  for (const vehicle of vehicles) {
+    const info = byId.get(Number(vehicle.vehicleId));
+    if (!info) continue;
+
+    vehicle.gosnum = info.gosnum || '';
+    vehicle.garnum = info.garnum ?? null;
+    vehicle.model = info.model || '';
+    vehicle.parkName = info.park_name || '';
+  }
+
+  return vehicles;
 }
 
 function emptySnapshot(transport) {

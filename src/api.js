@@ -178,6 +178,10 @@ export function normalizeVehicles(payload) {
         lat,
         lon,
         vector: Number.isFinite(vector) ? vector : 0,
+        gosnum: String(item.gosnum ?? item.gosNum ?? '').trim(),
+        model: String(item.model ?? item.modelName ?? '').trim(),
+        garnum: item.garnum ?? null,
+        parkName: String(item.parkName ?? item.park ?? '').trim(),
       };
     })
     .filter(Boolean);
@@ -504,6 +508,10 @@ export async function getAllVehicles() {
               vector: Number.isFinite(Number(vehicle.vector)) ? Number(vehicle.vector) : 0,
               route: String(vehicle.route ?? '').trim(),
               mtype: String(vehicle.mtype ?? '').trim(),
+              gosnum: String(vehicle.gosnum ?? '').trim(),
+              model: String(vehicle.model ?? '').trim(),
+              garnum: Number.isFinite(Number(vehicle.garnum)) ? Number(vehicle.garnum) : null,
+              parkName: String(vehicle.parkName ?? '').trim(),
             };
           })
           .filter(Boolean)

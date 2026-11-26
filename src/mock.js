@@ -284,6 +284,9 @@ export function geoInfo({ transport = 'bus' } = {}) {
       lat: round(position.lat),
       lon: round(position.lon),
       vector: Math.round((position.vector + 360) % 360),
+      gosnum: vehicle.gosnum,
+      model: vehicle.model,
+      garnum: vehicle.garnum,
     };
   });
 }

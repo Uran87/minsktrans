@@ -292,8 +292,17 @@ function renderRouteVehicles() {
     state.transport,
     state.selectedVehicleId,
     'На маршруте пока нет машин',
-    { route: state.route, stops: state.routeStops },
+    { route: state.route, routeName: currentRouteName(), stops: state.routeStops },
   );
+}
+
+function currentRouteName() {
+  const routes = routeOptionsCache.get(state.transport)?.routes;
+  if (!Array.isArray(routes)) return '';
+
+  const route = String(state.route ?? '');
+  const option = routes.find((item) => String(item.numl) === route);
+  return option?.name ? String(option.name) : '';
 }
 
 /**
@@ -904,16 +913,22 @@ function handleMockChange(enabled) {
 const routeOptionsCache = new Map();
 
 async function loadRouteOptions(transport, force = false) {
+  const applyRoutes = (routes) => {
+    if (transport !== state.transport) return;
+    ui.renderRouteOptions(routes);
+    if (state.routeStops.length) renderRouteVehicles();
+  };
+
   const cached = routeOptionsCache.get(transport);
   if (!force && cached && Date.now() - cached.at < 60_000) {
-    if (transport === state.transport) ui.renderRouteOptions(cached.routes);
+    applyRoutes(cached.routes);
     return;
   }
 
   try {
     const routes = await api.getRouteList({ transport });
     routeOptionsCache.set(transport, { at: Date.now(), routes });
-    if (transport === state.transport) ui.renderRouteOptions(routes);
+    applyRoutes(routes);
   } catch (error) {
     console.warn('[routeOptions]', error);
   }
