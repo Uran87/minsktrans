@@ -679,6 +679,7 @@ async function selectScoreboardVehicle(vehicleId, mType, routeNuml) {
   state.route = route;
   ui.setActiveTransport(type);
   ui.setRouteValue(route);
+  ui.setScheduleVisible(Boolean(route));
   savePrefs({ transport: type, route });
   loadRouteOptions(type);
 
@@ -796,6 +797,7 @@ function handleSubmit({ transport, route }) {
   state.transport = TRANSPORT_TYPES.includes(transport) ? transport : 'bus';
   state.route = String(route || '').trim();
   savePrefs({ transport: state.transport, route: state.route });
+  ui.setScheduleVisible(Boolean(state.route));
 
   if (!state.route) {
     ui.toast('Выберите маршрут', 'error');
@@ -814,6 +816,7 @@ function handleTransportChange(type) {
   state.transport = type;
   savePrefs({ transport: type });
   loadRouteOptions(type);
+  ui.setScheduleVisible(Boolean(String(state.route || '').trim()));
 
   closeStopPopup();
   if (ui.isDetailsOpen()) closeDetails();

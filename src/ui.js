@@ -602,6 +602,12 @@ export function isDetailsOpen() {
 /* Полное расписание на день                                           */
 /* ------------------------------------------------------------------ */
 
+export function setScheduleVisible(visible) {
+  if (!els.scheduleOpen) return;
+  els.scheduleOpen.hidden = !visible;
+  if (!visible) closeSchedule();
+}
+
 export function isScheduleOpen() {
   return Boolean(els.scheduleModal) && !els.scheduleModal.hidden;
 }
