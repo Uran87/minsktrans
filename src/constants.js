@@ -4,17 +4,17 @@
 
 export const POLL_INTERVAL = 30_000;
 
-export const TRANSPORT_TYPES = ['bus', 'trolley', 'tram'];
+export const TRANSPORT_TYPES = ['bus', 'trolleybus', 'tram'];
 
 export const TRANSPORT_LABELS = {
   bus: 'Автобус',
-  trolley: 'Троллейбус',
+  trolleybus: 'Троллейбус',
   tram: 'Трамвай',
 };
 
 export const TRANSPORT_COLORS = {
   bus: '#fbbf24',
-  trolley: '#38bdf8',
+  trolleybus: '#38bdf8',
   tram: '#fb7185',
 };
 
@@ -22,18 +22,14 @@ export function normalizeTransportType(value) {
   if (!value) return null;
   const v = String(value).trim().toLowerCase();
   if (['bus', 'avtobus', 'автобус', 'a'].includes(v)) return 'bus';
-  if (['trolley', 'trolleybus', 'troll', 'троллейбус', 't'].includes(v)) return 'trolley';
+  if (['trolley', 'trolleybus', 'troll', 'троллейбус', 't'].includes(v)) return 'trolleybus';
   if (['tram', 'tramway', 'трамвай', 'tr'].includes(v)) return 'tram';
   return null;
 }
 
 /** Значения transport для API: bus, trolleybus, tram, routetaxi. */
 export function apiTransportValue(type) {
-  const normalized = normalizeTransportType(type);
-  if (normalized === 'bus') return 'bus';
-  if (normalized === 'trolley') return 'trolleybus';
-  if (normalized === 'tram') return 'tram';
-  return type;
+  return normalizeTransportType(type) || type;
 }
 
 /**
@@ -45,7 +41,7 @@ export function transportTypeFromMType(value) {
   if (!v) return null;
 
   if (['А', 'A', 'BUS', 'АВТОБУС'].includes(v)) return 'bus';
-  if (['Т', 'T', 'TROLLEY', 'TROLLEYBUS', 'ТРОЛЛЕЙБУС'].includes(v)) return 'trolley';
+  if (['Т', 'T', 'TROLLEY', 'TROLLEYBUS', 'ТРОЛЛЕЙБУС'].includes(v)) return 'trolleybus';
   if (['#', 'ТР', 'TR', 'TRAM', 'ТРАМВАЙ'].includes(v)) return 'tram';
 
   return normalizeTransportType(v);
@@ -54,7 +50,7 @@ export function transportTypeFromMType(value) {
 export function mTypeBadge(value, type = null) {
   const t = type || transportTypeFromMType(value);
   if (t === 'bus') return 'А';
-  if (t === 'trolley') return 'Т';
+  if (t === 'trolleybus') return 'Т';
   if (t === 'tram') return 'Тр';
   return value ? String(value) : '?';
 }

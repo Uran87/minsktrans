@@ -279,7 +279,7 @@ async function handle(db, req, res) {
 
   if (path === '/api/live/vehicles') {
     const transport = (url.searchParams.get('transport') || 'bus').trim();
-    if (!['bus', 'trolley', 'tram'].includes(transport)) {
+    if (!['bus', 'trolleybus', 'tram'].includes(transport)) {
       sendError(res, 400, 'Неизвестный тип транспорта');
       return;
     }

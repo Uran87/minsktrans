@@ -60,8 +60,12 @@ function loadPrefs() {
 
   try {
     const stored = JSON.parse(localStorage.getItem(PREFS_KEY) || '{}');
+    const storedTransport = normalizeTransportType(stored.transport);
     return {
-      transport: TRANSPORT_TYPES.includes(stored.transport) ? stored.transport : defaults.transport,
+      transport:
+        storedTransport && TRANSPORT_TYPES.includes(storedTransport)
+          ? storedTransport
+          : defaults.transport,
       route: '',
       layer: VALID_LAYERS.includes(stored.layer) ? stored.layer : defaults.layer,
       mock: typeof stored.mock === 'boolean' ? stored.mock : defaults.mock,

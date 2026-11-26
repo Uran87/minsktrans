@@ -219,14 +219,14 @@ function orderFor(direction) {
  */
 const VEHICLES_BY_TYPE = {
   bus: VEHICLES.map((vehicle) => ({ ...vehicle, type: 'bus' })),
-  trolley: VEHICLES.map((vehicle, index) => ({
+  trolleybus: VEHICLES.map((vehicle, index) => ({
     ...vehicle,
     vehicleId: 500100 + index,
     progress: (vehicle.progress + 0.21) % 1,
     gosnum: `T${100 + index}`,
     model: 'АКСМ-321',
     garnum: vehicle.garnum + 500,
-    type: 'trolley',
+    type: 'trolleybus',
   })),
   tram: VEHICLES.map((vehicle, index) => ({
     ...vehicle,

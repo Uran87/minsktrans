@@ -3,7 +3,7 @@ import { normalizeGeoInfo } from './normalize.js';
 import { fetchGeoInfoMar } from './upstream.js';
 import { mapLimit } from './util.js';
 
-const TRANSPORTS = ['bus', 'trolley', 'tram'];
+const TRANSPORTS = ['bus', 'trolleybus', 'tram'];
 const snapshots = new Map();
 const attempts = new Map();
 const cooldowns = new Map();

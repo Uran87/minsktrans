@@ -11,7 +11,36 @@ export function openDatabase(file) {
 
   const db = new DatabaseSync(file);
   db.exec(fs.readFileSync(schemaPath, 'utf8'));
+  migrateTrolleybus(db);
   return db;
+}
+
+/**
+ * Старые базы хранили тип как `trolley`. Переводим на единый `trolleybus`.
+ * Если маршрут с таким номером уже есть, старую запись оставляем неактивной.
+ */
+function migrateTrolleybus(db) {
+  const rows = db.prepare("SELECT id, numl FROM routes WHERE mtype = 'trolley'").all();
+  if (!rows.length) return;
+
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    for (const row of rows) {
+      const existing = db
+        .prepare("SELECT id FROM routes WHERE mtype = 'trolleybus' AND numl = ?")
+        .get(row.numl);
+
+      if (existing) {
+        db.prepare('UPDATE routes SET active = 0 WHERE id = ?').run(row.id);
+      } else {
+        db.prepare("UPDATE routes SET mtype = 'trolleybus' WHERE id = ?").run(row.id);
+      }
+    }
+    db.exec('COMMIT');
+  } catch (error) {
+    db.exec('ROLLBACK');
+    throw error;
+  }
 }
 
 export function nowIso() {

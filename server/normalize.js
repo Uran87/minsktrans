@@ -111,7 +111,7 @@ export function normalizeScoreboardRoutes(payload) {
 export function transportFromMType(value) {
   const v = stringOrEmpty(value).toUpperCase();
   if (['А', 'A', 'BUS', 'АВТОБУС'].includes(v)) return 'bus';
-  if (['Т', 'T', 'TROLLEY', 'TROLLEYBUS', 'ТРОЛЛЕЙБУС'].includes(v)) return 'trolley';
+  if (['Т', 'T', 'TROLLEY', 'TROLLEYBUS', 'ТРОЛЛЕЙБУС'].includes(v)) return 'trolleybus';
   if (['#', 'ТР', 'TR', 'TRAM', 'ТРАМВАЙ'].includes(v)) return 'tram';
   return '';
 }
