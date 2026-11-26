@@ -418,7 +418,14 @@ export function renderVehicles(vehicles, transport, selectedId = null, emptyText
           <span class="vehicle-dot" style="--dot-color:${color}" aria-hidden="true"></span>
           <span class="vehicle-main">
             <span class="vehicle-line">
-              ${gosnum ? `<span class="vehicle-plate">${esc(gosnum)}</span>` : ''}
+              ${
+                gosnum
+                  ? `<span class="vehicle-plate">
+                       <span class="vehicle-plate-number">${esc(gosnum)}</span>
+                       <span class="vehicle-plate-label">госномер</span>
+                     </span>`
+                  : ''
+              }
               <span class="vehicle-direction">направление: ${esc(direction)}</span>
             </span>
             ${vehicle.nextStopName ? `<small class="vehicle-next" title="Следующая остановка">→ ${esc(vehicle.nextStopName)}</small>` : ''}
