@@ -46,6 +46,15 @@ function esc(value) {
   });
 }
 
+/** Направление для строки списка: строчными, без нагромождения «направление». */
+function directionCaption(direction) {
+  if (direction === null || direction === undefined || direction === '') return 'не указано';
+  const n = Number(direction);
+  if (n === 0) return 'прямое';
+  if (n === 1) return 'обратное';
+  return 'не указано';
+}
+
 /* ------------------------------------------------------------------ */
 /* Инициализация                                                       */
 /* ------------------------------------------------------------------ */
@@ -400,17 +409,17 @@ export function renderVehicles(vehicles, transport, selectedId = null, emptyText
       const id = String(vehicle.vehicleId);
       const active = selectedId !== null && String(selectedId) === id;
       const gosnum = String(vehicle.gosnum ?? '').trim();
-      const direction = directionLabel(vehicle.direction);
+      const direction = directionCaption(vehicle.direction);
 
       return `<li>
         <button type="button" class="vehicle-item${active ? ' is-active' : ''}"
                 data-vehicle-id="${esc(id)}" title="${esc(routeTitle)}"
-                aria-label="Открыть карточку: ${esc(routeTitle)}, ${esc(direction)}${gosnum ? `, госномер ${esc(gosnum)}` : ''}">
+                aria-label="Открыть карточку: ${esc(routeTitle)}${gosnum ? `, госномер ${esc(gosnum)}` : ''}, направление ${esc(direction)}">
           <span class="vehicle-dot" style="--dot-color:${color}" aria-hidden="true"></span>
           <span class="vehicle-main">
             <span class="vehicle-line">
-              <strong class="vehicle-direction">${esc(direction)}</strong>
               ${gosnum ? `<span class="vehicle-plate">${esc(gosnum)}</span>` : ''}
+              <span class="vehicle-direction">направление: ${esc(direction)}</span>
             </span>
             ${vehicle.nextStopName ? `<small class="vehicle-next" title="Следующая остановка">→ ${esc(vehicle.nextStopName)}</small>` : ''}
           </span>
