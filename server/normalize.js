@@ -104,6 +104,10 @@ export function normalizeScoreboardRoutes(payload) {
   return { stopName: stringOrEmpty(data.stopName), routes };
 }
 
+/**
+ * mType из /scoreboard: кириллица «А» — автобус, «Т» — троллейбус, «#» — трамвай.
+ * Дополнительно поддерживаем латинские и текстовые варианты.
+ */
 export function transportFromMType(value) {
   const v = stringOrEmpty(value).toUpperCase();
   if (['А', 'A', 'BUS', 'АВТОБУС'].includes(v)) return 'bus';

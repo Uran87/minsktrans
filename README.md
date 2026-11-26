@@ -168,7 +168,7 @@ Backend также кэширует live-ответы на несколько с
 | GET | `/scoreboard?idStop={stopId}&txt=false` | табло остановки и обнаружение маршрутов |
 | GET | `/vehicles`, `/vehicle?id=` | справочник ТС, модель, госномер, `parkName` |
 
-Значения `transport`: `bus`, `trolleybus`, `tram`, `routetaxi`. В ответах `/scoreboard` тип маршрута приходит в `mType` как `А`, `Т`, `#`.
+Значения `transport`: `bus`, `trolleybus`, `tram`, `routetaxi`. В ответах `/scoreboard` тип маршрута приходит в `mType` **кириллицей**: `А`, `Т`, `#`.
 
 Реальные примеры запросов и ответов: `docs/api-real-samples.md`.
 
