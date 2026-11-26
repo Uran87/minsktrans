@@ -65,16 +65,23 @@ const iconCache = new Map();
 /* ------------------------------------------------------------------ */
 
 function vehicleIconSvg(color, selected) {
-  const ring = selected ? '#f8fafc' : 'rgba(255,255,255,0.55)';
-  const ringWidth = selected ? 3 : 1.5;
-  const glowOpacity = selected ? 0.4 : 0.18;
+  const ring = selected ? '#f8fafc' : 'rgba(255,255,255,0.7)';
+  const ringWidth = selected ? 2.5 : 1.5;
+  const glowOpacity = selected ? 0.4 : 0.2;
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="42" height="42" viewBox="0 0 42 42">
-    <circle cx="21" cy="21" r="19" fill="${color}" fill-opacity="${glowOpacity}"/>
-    <circle cx="21" cy="21" r="18" fill="none" stroke="${ring}" stroke-width="${ringWidth}"/>
-    <path d="M21 7 L31 30 L21 25.4 L11 30 Z"
-          fill="${color}" stroke="#0b1220" stroke-width="1.4" stroke-linejoin="round"/>
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44">
+    <circle cx="22" cy="22" r="21" fill="${color}" fill-opacity="${glowOpacity}"/>
+    <circle cx="22" cy="22" r="17.5" fill="${color}" stroke="#0b1220" stroke-width="1.5"/>
+    <circle cx="22" cy="22" r="17.5" fill="none" stroke="${ring}" stroke-width="${ringWidth}" stroke-opacity="0.85"/>
+    <path d="M22 1.5 L27 10.5 L17 10.5 Z"
+          fill="#0b1220" stroke="${ring}" stroke-width="1.2" stroke-linejoin="round"/>
   </svg>`;
+}
+
+function routeLabelFont(routeNumber) {
+  const length = String(routeNumber ?? '').trim().length;
+  const size = length >= 3 ? 9 : length === 2 ? 11 : 12;
+  return `800 ${size}px Inter, "Segoe UI", system-ui, sans-serif`;
 }
 
 function vehicleIcon(color, selected) {
@@ -91,12 +98,10 @@ function vehicleIcon(color, selected) {
 function createVehicleStyle(color, selected, vector = 0, routeNumber = '', showRouteNumber = false) {
   const text = new Text({
     text: showRouteNumber ? String(routeNumber || '') : '',
-    font: '700 10px Inter, "Segoe UI", system-ui, sans-serif',
-    offsetY: -27,
-    padding: [2, 4, 2, 4],
-    fill: new Fill({ color: '#07101f' }),
-    backgroundFill: new Fill({ color }),
-    backgroundStroke: new Stroke({ color: 'rgba(2, 6, 23, 0.65)', width: 1 }),
+    font: routeLabelFont(routeNumber),
+    textAlign: 'center',
+    textBaseline: 'middle',
+    fill: new Fill({ color: '#08131f' }),
   });
 
   return new Style({
@@ -746,7 +751,7 @@ export function updateVehicles(vehicles, transport) {
       const text = entry.style.getText();
       if (text) {
         text.setText(showRouteNumber ? routeNumber : '');
-        text.getBackgroundFill()?.setColor(color);
+        text.setFont(routeLabelFont(routeNumber));
       }
 
       entry.icon.setRotation(((Number(vehicle.vector) || 0) * Math.PI) / 180);
