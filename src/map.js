@@ -94,6 +94,20 @@ function vehicleIcon(color, selected) {
   return iconCache.get(key);
 }
 
+const VEHICLE_ROUTE_LABEL_SCALE = 1.35;
+
+/**
+ * Маркер ТС увеличивается на 35 %, когда на нём рисуется номер маршрута:
+ * иначе цифра не помещается внутри стрелки. Без номера — прежний размер.
+ */
+function vehicleScale(selected, showRouteNumber) {
+  return (selected ? 1.15 : 1) * (showRouteNumber ? VEHICLE_ROUTE_LABEL_SCALE : 1);
+}
+
+function showsRouteNumbers() {
+  return (map?.getView().getZoom() ?? 0) >= VEHICLE_ROUTE_LABEL_MIN_ZOOM;
+}
+
 function createVehicleStyle(color, selected, vector = 0, routeNumber = '', showRouteNumber = false) {
   const text = new Text({
     text: showRouteNumber ? String(routeNumber || '') : '',
@@ -109,7 +123,7 @@ function createVehicleStyle(color, selected, vector = 0, routeNumber = '', showR
       anchor: [0.5, 0.5],
       rotation: (Number(vector) || 0) * (Math.PI / 180),
       rotateWithView: true,
-      scale: selected ? 1.15 : 1,
+      scale: vehicleScale(selected, showRouteNumber),
     }),
     text,
     zIndex: selected ? 30 : 10,
@@ -694,7 +708,7 @@ export function clearRoute() {
 function applySelection(entry, selected) {
   entry.selected = selected;
   entry.icon.setSrc(vehicleIcon(entry.color, selected));
-  entry.icon.setScale(selected ? 1.15 : 1);
+  entry.icon.setScale(vehicleScale(selected, showsRouteNumbers()));
   entry.style.setZIndex(selected ? 30 : 10);
 }
 
@@ -754,6 +768,7 @@ export function updateVehicles(vehicles, transport) {
       }
 
       entry.icon.setRotation(((Number(vehicle.vector) || 0) * Math.PI) / 180);
+      entry.icon.setScale(vehicleScale(entry.selected, showRouteNumber));
       entry.style.setZIndex(entry.selected ? 30 : 10);
     }
   }
