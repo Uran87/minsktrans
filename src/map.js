@@ -54,6 +54,7 @@ const FAR_CLUSTER_DISTANCE_METERS = 1000;
 const NEAR_CLUSTER_DISTANCE_METERS = 200;
 const NEAR_CLUSTER_MIN_ZOOM = 13;
 const LABEL_MIN_ZOOM = 17;
+const VEHICLE_ROUTE_LABEL_MIN_ZOOM = 16;
 
 /** vehicleId -> { feature, style, icon, color, selected } */
 const vehicleEntries = new Map();
@@ -87,7 +88,17 @@ function vehicleIcon(color, selected) {
   return iconCache.get(key);
 }
 
-function createVehicleStyle(color, selected, vector = 0) {
+function createVehicleStyle(color, selected, vector = 0, routeNumber = '', showRouteNumber = false) {
+  const text = new Text({
+    text: showRouteNumber ? String(routeNumber || '') : '',
+    font: '700 10px Inter, "Segoe UI", system-ui, sans-serif',
+    offsetY: -27,
+    padding: [2, 4, 2, 4],
+    fill: new Fill({ color: '#07101f' }),
+    backgroundFill: new Fill({ color }),
+    backgroundStroke: new Stroke({ color: 'rgba(2, 6, 23, 0.65)', width: 1 }),
+  });
+
   return new Style({
     image: new Icon({
       src: vehicleIcon(color, selected),
@@ -96,6 +107,7 @@ function createVehicleStyle(color, selected, vector = 0) {
       rotateWithView: true,
       scale: selected ? 1.15 : 1,
     }),
+    text,
     zIndex: selected ? 30 : 10,
   });
 }
@@ -687,6 +699,7 @@ export function updateVehicles(vehicles, transport) {
 
   const defaultType = normalizeTransportType(transport) || transport;
   const defaultColor = TRANSPORT_COLORS[defaultType] || TRANSPORT_COLORS.bus;
+  const showRouteNumber = (map?.getView().getZoom() ?? 0) >= VEHICLE_ROUTE_LABEL_MIN_ZOOM;
   const seen = new Set();
 
   for (const vehicle of vehicles) {
@@ -698,13 +711,20 @@ export function updateVehicles(vehicles, transport) {
       normalizeTransportType(vehicle.tsType) ||
       defaultType;
     const color = TRANSPORT_COLORS[vehicleType] || defaultColor;
+    const routeNumber = String(vehicle.route ?? vehicle.marNuml ?? '').trim();
 
     let entry = vehicleEntries.get(key);
     const coordinate = fromLonLat([vehicle.lon, vehicle.lat]);
 
     if (!entry) {
       const selected = selectedVehicleId !== null && selectedVehicleId === key;
-      const style = createVehicleStyle(color, selected, vehicle.vector);
+      const style = createVehicleStyle(
+        color,
+        selected,
+        vehicle.vector,
+        routeNumber,
+        showRouteNumber,
+      );
       const feature = new Feature({ geometry: new Point(coordinate) });
       feature.set('vehicleId', vehicle.vehicleId);
       feature.set('vehicle', vehicle);
@@ -721,6 +741,12 @@ export function updateVehicles(vehicles, transport) {
       if (entry.color !== color) {
         entry.color = color;
         entry.icon.setSrc(vehicleIcon(color, entry.selected));
+      }
+
+      const text = entry.style.getText();
+      if (text) {
+        text.setText(showRouteNumber ? routeNumber : '');
+        text.getBackgroundFill()?.setColor(color);
       }
 
       entry.icon.setRotation(((Number(vehicle.vector) || 0) * Math.PI) / 180);
