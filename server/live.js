@@ -1,6 +1,7 @@
 import { config } from './config.js';
 import { normalizeGeoInfo } from './normalize.js';
 import { fetchGeoInfoMar } from './upstream.js';
+import { filterVehiclesByTransport, loadVehicleTypeMap } from './vehicle-types.js';
 import { mapLimit } from './util.js';
 
 const TRANSPORTS = ['bus', 'trolley', 'tram'];
@@ -40,6 +41,7 @@ async function refreshTransport(db, transport) {
       previousByRoute.get(vehicle.route).push(vehicle);
     }
 
+    const typeMap = loadVehicleTypeMap(db);
     const vehicles = [];
     const succeeded = new Set();
     let errors = 0;
@@ -57,7 +59,11 @@ async function refreshTransport(db, transport) {
         const payload = await fetchGeoInfoMar(route.mtype, route.numl, {
           timeoutMs: config.liveRequestTimeoutMs,
         });
-        const list = normalizeGeoInfo(payload);
+        const list = filterVehiclesByTransport(
+          normalizeGeoInfo(payload),
+          typeMap,
+          route.mtype,
+        );
         succeeded.add(route.numl);
         successes += 1;
 

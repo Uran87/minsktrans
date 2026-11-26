@@ -213,6 +213,34 @@ function orderFor(direction) {
   return Number(direction) === 0 ? REVERSE : FORWARD;
 }
 
+/**
+ * Демо-парк по типам транспорта. Раньше все типы использовали один набор
+ * машин, из-за чего троллейбусы и трамваи визуально совпадали с автобусами.
+ */
+const VEHICLES_BY_TYPE = {
+  bus: VEHICLES.map((vehicle) => ({ ...vehicle, type: 'bus' })),
+  trolley: VEHICLES.map((vehicle, index) => ({
+    ...vehicle,
+    vehicleId: 500100 + index,
+    progress: (vehicle.progress + 0.21) % 1,
+    gosnum: `T${100 + index}`,
+    model: 'АКСМ-321',
+    garnum: vehicle.garnum + 500,
+    type: 'trolley',
+  })),
+  tram: VEHICLES.map((vehicle, index) => ({
+    ...vehicle,
+    vehicleId: 600100 + index,
+    progress: (vehicle.progress + 0.47) % 1,
+    gosnum: `TR${100 + index}`,
+    model: 'АКСМ-843',
+    garnum: vehicle.garnum + 900,
+    type: 'tram',
+  })),
+};
+
+const ALL_VEHICLES = Object.values(VEHICLES_BY_TYPE).flat();
+
 function currentProgress(vehicle, now = Date.now()) {
   return (vehicle.progress + (now - STARTED_AT) / LOOP_DURATION) % 1;
 }
@@ -243,10 +271,11 @@ function round(value, digits = 6) {
 /* Ответы, имитирующие API                                             */
 /* ------------------------------------------------------------------ */
 
-export function geoInfo() {
+export function geoInfo({ transport = 'bus' } = {}) {
   const now = Date.now();
+  const vehicles = VEHICLES_BY_TYPE[transport] || VEHICLES_BY_TYPE.bus;
 
-  return VEHICLES.map((vehicle) => {
+  return vehicles.map((vehicle) => {
     const position = positionOn(orderFor(vehicle.direction), currentProgress(vehicle, now));
 
     return {
@@ -586,13 +615,15 @@ export function scoreboard(stopId) {
 }
 
 export function vehicleState(vehicleId) {
-  const vehicle = VEHICLES.find((item) => String(item.vehicleId) === String(vehicleId)) || VEHICLES[0];
+  const vehicle =
+    ALL_VEHICLES.find((item) => String(item.vehicleId) === String(vehicleId)) ||
+    ALL_VEHICLES[0];
   const order = orderFor(vehicle.direction);
   const position = positionOn(order, currentProgress(vehicle));
 
   return {
     marNuml: '1',
-    tsTypeAdd: 'bus',
+    tsTypeAdd: vehicle.type || 'bus',
     categoryTraffic: 'обычный',
     cityCode: 66,
     marshrutStops: order.map((stop) => stop.id),
