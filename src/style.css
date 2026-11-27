@@ -714,7 +714,7 @@ button:focus-visible {
 .map-controls .chips {
   display: grid;
   flex: none;
-  grid-template-columns: repeat(3, 112px);
+  grid-template-columns: repeat(3, 124px);
   gap: 4px;
 }
 
@@ -722,8 +722,9 @@ button:focus-visible {
   min-width: 0;
   padding: 7px 8px;
   font-size: 10.5px;
-  white-space: normal;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: keep-all;
   text-align: center;
   line-height: 1.2;
 }
@@ -738,13 +739,13 @@ button:focus-visible {
 
   .map-controls .chips {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    width: min(300px, calc(100vw - 52px));
+    width: min(320px, calc(100vw - 48px));
   }
 
   .map-controls .chip {
     min-width: 0;
-    padding: 6px;
-    font-size: 9.5px;
+    padding: 6px 4px;
+    font-size: clamp(6.5px, 2.4vw, 9.5px);
     line-height: 1.15;
   }
 }
