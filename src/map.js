@@ -1,5 +1,5 @@
 /**
- * Карта на OpenLayers: Google Tiles + слой маршрута + слой транспорта.
+ * Карта на OpenLayers: базовые слои maps.by / Белгеодезии + маршрут и транспорт.
  *
  * Фичи транспорта переиспользуются между опросами: обновляется только
  * геометрия (feature.setGeometry) и угол иконки. Новые фичи не создаются.
@@ -203,19 +203,47 @@ function stopClusterIcon(color = null) {
 /* Базовые слои                                                        */
 /* ------------------------------------------------------------------ */
 
-function googleTiles(lyrs) {
-  // Важно: crossOrigin не задаём — Google не отдаёт CORS-заголовки на тайлы,
-  // а для обычных <img> они и не нужны.
+/** Ключ доступа к схематичной карте maps.by (публичный, выдаётся провайдером). */
+const MAPS_BY_API_KEY =
+  '$2a$10$5YxlFLyokKfQDVWrShiNVOwd6I5LeM5uul8KIsZ4blZCxSIPUcA0S*$2a$10$5YxlFLyokKfQDVWrShiNVOtZ9jBbOMvBRH.8nq7.A9V/xKLPZsQJK';
+
+/** Схема без подписей: XYZ-тайлы maps.by (реальная детализация до 17 уровня). */
+function mapsByTiles() {
   return new XYZ({
-    url: `https://mt1.google.com/vt/lyrs=${lyrs}&x={x}&y={y}&z={z}`,
-    maxZoom: 20,
+    url: `https://api.maps.by/api/wmts/noLabel/QGIS/{z}/{y}/{x}?apiKey=${encodeURIComponent(MAPS_BY_API_KEY)}`,
+    maxZoom: 17,
+    attributions: 'Схема: maps.by',
+  });
+}
+
+/**
+ * Слои Белгеодезии (WMTS, EPSG:3857).
+ * Сетка тайлов совпадает со стандартной XYZ: уровень = z, строка = y, колонка = x.
+ */
+function belgeodesyTiles(path, { maxZoom, attribution }) {
+  return new XYZ({
+    url: `https://nipd.by/elitegis/ogc/${path}/tile/default/default28mm/{z}/{y}/{x}`,
+    maxZoom,
+    attributions: attribution,
   });
 }
 
 const baseLayers = {
-  map: new TileLayer({ source: googleTiles('m'), visible: true }),
-  satellite: new TileLayer({ source: googleTiles('s'), visible: false }),
-  hybrid: new TileLayer({ source: googleTiles('y'), visible: false }),
+  map: new TileLayer({ source: mapsByTiles(), visible: true }),
+  satellite: new TileLayer({
+    source: belgeodesyTiles('Base_maps/dzz_mp', {
+      maxZoom: 18,
+      attribution: 'Спутник: Белгеодезия / НИПД',
+    }),
+    visible: false,
+  }),
+  mmm: new TileLayer({
+    source: belgeodesyTiles('ec_Belgeodesy/mmm', {
+      maxZoom: 17,
+      attribution: 'Мультимасштабная карта: НИПД / Белгеодезия',
+    }),
+    visible: false,
+  }),
 };
 
 /* ------------------------------------------------------------------ */
@@ -456,7 +484,7 @@ export function initMap(target, { onVehicleClick, onStopClick, onEmptyClick, onZ
     layers: [
       baseLayers.map,
       baseLayers.satellite,
-      baseLayers.hybrid,
+      baseLayers.mmm,
       stopsLayer,
       routeLayer,
       vehicleLayer,
