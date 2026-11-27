@@ -623,6 +623,39 @@ button:focus-visible {
   border-top: 1px solid var(--border);
 }
 
+.settings-toggle {
+  display: grid;
+  align-self: flex-end;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin: -6px 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted-2);
+  opacity: 0.5;
+  cursor: pointer;
+  transition: opacity 0.18s, color 0.18s, background 0.18s;
+}
+
+.settings-toggle:hover {
+  background: rgba(148, 163, 184, 0.08);
+  color: var(--muted);
+  opacity: 1;
+}
+
+.settings-toggle svg {
+  width: 12px;
+  height: 12px;
+  transition: transform 0.2s;
+}
+
+.settings-toggle.is-open svg {
+  transform: rotate(180deg);
+}
+
 .chips {
   display: flex;
   gap: 6px;

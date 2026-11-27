@@ -74,6 +74,8 @@ export function init(config) {
   els.vehiclesRoute = document.getElementById('vehicles-route');
   els.vehiclesList = document.getElementById('vehicles-list');
   els.layerToggle = document.getElementById('layer-toggle');
+  els.settings = document.getElementById('settings');
+  els.settingsToggle = document.getElementById('settings-toggle');
   els.mockToggle = document.getElementById('mock-toggle');
   els.apiBaseLabel = document.getElementById('api-base-label');
   els.details = document.getElementById('details');
@@ -186,6 +188,8 @@ function wireEvents() {
     setActiveLayer(layer);
     handlers.onLayerChange?.(layer);
   });
+
+  els.settingsToggle?.addEventListener('click', () => toggleSettings());
 
   els.mockToggle.addEventListener('change', () => {
     handlers.onMockChange?.(els.mockToggle.checked);
@@ -404,6 +408,19 @@ export function renderRouteOptions(routes = []) {
 
 export function setMockChecked(checked) {
   els.mockToggle.checked = Boolean(checked);
+}
+
+function toggleSettings(force) {
+  if (!els.settings || !els.settingsToggle) return;
+
+  const open = typeof force === 'boolean' ? force : els.settings.hidden;
+  els.settings.hidden = !open;
+  els.settingsToggle.classList.toggle('is-open', open);
+  els.settingsToggle.setAttribute('aria-expanded', String(open));
+  els.settingsToggle.setAttribute(
+    'aria-label',
+    open ? 'Скрыть настройки данных' : 'Показать настройки данных',
+  );
 }
 
 export function setLoading(loading) {
