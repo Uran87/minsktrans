@@ -88,6 +88,11 @@ export function init(config) {
   els.scheduleSummary = document.getElementById('schedule-summary');
   els.scheduleBody = document.getElementById('schedule-body');
   els.scheduleClose = document.getElementById('schedule-close');
+  els.stopsModal = document.getElementById('stops-modal');
+  els.stopsClose = document.getElementById('stops-close');
+  els.stopsSearch = document.getElementById('stops-search');
+  els.stopsSummary = document.getElementById('stops-summary');
+  els.stopsBody = document.getElementById('stops-body');
   els.stopPopup = document.getElementById('stop-popup');
   els.stopPopupBody = document.getElementById('stop-popup-body');
   els.stopPopupClose = document.getElementById('stop-popup-close');
@@ -201,9 +206,26 @@ function wireEvents() {
     if (event.target.closest('[data-schedule-retry]')) handlers.onScheduleRetry?.();
   });
 
+  els.stopsClose?.addEventListener('click', closeStopsModal);
+  els.stopsModal?.addEventListener('click', (event) => {
+    if (event.target.closest('[data-stops-close]')) closeStopsModal();
+  });
+  els.stopsSearch?.addEventListener('input', () => renderStopsList(els.stopsSearch.value));
+  els.stopsBody?.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-stop-id]');
+    if (!button) return;
+    const stopId = Number(button.dataset.stopId);
+    if (Number.isFinite(stopId)) handlers.onStopNavigate?.(stopId);
+  });
+
   els.stopPopupClose?.addEventListener('click', () => handlers.onStopPopupClose?.());
 
   els.stopPopupBody.addEventListener('click', (event) => {
+    if (event.target.closest('[data-open-stops]')) {
+      handlers.onStopsOpen?.();
+      return;
+    }
+
     const vehicleButton = event.target.closest('[data-scoreboard-vehicle-id]');
     if (vehicleButton) {
       const vehicleId = Number(vehicleButton.dataset.scoreboardVehicleId);
@@ -241,6 +263,10 @@ function wireEvents() {
 
   document.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape') return;
+    if (!els.stopsModal.hidden) {
+      closeStopsModal();
+      return;
+    }
     if (!els.scheduleModal.hidden) {
       closeSchedule();
       return;
@@ -789,6 +815,98 @@ export function renderSchedule({ transport, route, trips = [], stops = new Map()
 }
 
 /* ------------------------------------------------------------------ */
+/* Модальное окно «Все остановки»                                      */
+/* ------------------------------------------------------------------ */
+
+let stopsModalState = { list: [], currentStopId: null };
+
+export function isStopsModalOpen() {
+  return Boolean(els.stopsModal) && !els.stopsModal.hidden;
+}
+
+export function closeStopsModal() {
+  if (!els.stopsModal) return;
+  els.stopsModal.hidden = true;
+  els.stopsBody.innerHTML = '';
+  els.stopsSearch.value = '';
+  els.stopsSummary.textContent = '';
+  stopsModalState = { list: [], currentStopId: null };
+}
+
+function stopRowMarkup(stop) {
+  const ru = stop.nameRu || stop.name || `Остановка ${stop.stopId}`;
+  const by = stop.nameBy && stop.nameBy !== ru ? stop.nameBy : '';
+  const en = stop.nameEn && stop.nameEn !== ru && stop.nameEn !== by ? stop.nameEn : '';
+  const lat = Number.isFinite(Number(stop.lat)) ? Number(stop.lat).toFixed(6) : '—';
+  const lon = Number.isFinite(Number(stop.lon)) ? Number(stop.lon).toFixed(6) : '—';
+  const current =
+    stopsModalState.currentStopId !== null &&
+    String(stopsModalState.currentStopId) === String(stop.stopId);
+
+  return `<button type="button" class="stop-row${current ? ' is-current' : ''}"
+                  data-stop-id="${esc(stop.stopId)}" title="Перейти к остановке «${esc(ru)}»">
+    <span class="stop-row-main">
+      <span class="stop-row-name">${esc(ru)}</span>
+      ${by ? `<span class="stop-row-alt"><span class="stop-lang">BY</span>${esc(by)}</span>` : ''}
+      ${en ? `<span class="stop-row-alt"><span class="stop-lang">EN</span>${esc(en)}</span>` : ''}
+    </span>
+    <span class="stop-row-coords">
+      <span>${esc(lat)}</span>
+      <span>${esc(lon)}</span>
+    </span>
+    <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </button>`;
+}
+
+function renderStopsList(query = '') {
+  if (!els.stopsBody) return;
+
+  const q = String(query ?? '').trim().toLowerCase();
+  const all = stopsModalState.list;
+  const list = q
+    ? all.filter((stop) =>
+        [stop.name, stop.nameRu, stop.nameBy, stop.nameEn]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+          .includes(q),
+      )
+    : all;
+
+  els.stopsSummary.textContent = q
+    ? `${list.length} из ${all.length}`
+    : `${all.length} ${pluralize(all.length, ['остановка', 'остановки', 'остановок'])}`;
+
+  if (!list.length) {
+    els.stopsBody.innerHTML = '<p class="empty-note">Остановки не найдены.</p>';
+    return;
+  }
+
+  els.stopsBody.innerHTML = list.map(stopRowMarkup).join('');
+}
+
+export function showStopsModal({ stops = new Map(), currentStopId = null } = {}) {
+  if (!els.stopsModal) return;
+
+  const list = [...stops.values()]
+    .filter((stop) => stop && stop.stopId !== undefined)
+    .sort((a, b) =>
+      String(a.name || a.nameRu || '').localeCompare(String(b.name || b.nameRu || ''), 'ru'),
+    );
+
+  stopsModalState = { list, currentStopId };
+  els.stopsModal.hidden = false;
+  els.stopsSearch.value = '';
+  els.stopsBody.scrollTop = 0;
+  renderStopsList('');
+
+  els.stopsBody.querySelector('.stop-row.is-current')?.scrollIntoView({ block: 'center' });
+}
+
+/* ------------------------------------------------------------------ */
 /* Попап остановки                                                     */
 /* ------------------------------------------------------------------ */
 
@@ -798,7 +916,7 @@ export function renderStopPopup({ stop, isRouteStop = false, route, transport })
   const typeLabel = TRANSPORT_LABELS[normalizeTransportType(transport)] || 'Транспорт';
   const title = stop.name || stop.nameRu || `Остановка ${stop.stopId}`;
 
-  const rows = [['ID остановки', stop.stopId]];
+  const rows = [];
 
   if (Number.isFinite(stop.lat) && Number.isFinite(stop.lon)) {
     rows.push(['Координаты', `${stop.lat.toFixed(6)}, ${stop.lon.toFixed(6)}`]);
@@ -812,9 +930,11 @@ export function renderStopPopup({ stop, isRouteStop = false, route, transport })
   els.stopPopupBody.innerHTML = `
     <span class="stop-popup-kicker">${isRouteStop ? 'Остановка маршрута' : 'Остановка'}</span>
     <h3>${esc(title)}</h3>
-    <span class="stop-popup-badge${isRouteStop ? '' : ' is-muted'}">
-      ${isRouteStop ? `${esc(typeLabel)} · маршрут №${esc(route || '—')}` : 'Все остановки'}
-    </span>
+    ${
+      isRouteStop
+        ? `<span class="stop-popup-badge">${esc(typeLabel)} · маршрут №${esc(route || '—')}</span>`
+        : '<button type="button" class="stop-popup-badge is-muted" data-open-stops>Все остановки</button>'
+    }
     <dl class="stop-popup-list">
       ${rows
         .map(

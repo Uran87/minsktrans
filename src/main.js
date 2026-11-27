@@ -38,6 +38,7 @@ const state = {
   pollErrorShown: false,
   selectedVehicleId: null,
   detailsVehicleId: null,
+  stopPopupStopId: null,
   detailsToken: 0,
   scheduleToken: 0,
   scoreboardToken: 0,
@@ -751,6 +752,7 @@ function handleStopClick(stopId, coordinate, zoom = null) {
 
   if (ui.isDetailsOpen()) closeDetails();
 
+  state.stopPopupStopId = Number(stopId);
   const isRouteStop = state.routeStopIds.includes(Number(stopId));
   const target = mapView.focusStop(stop, zoom) || coordinate;
 
@@ -794,8 +796,26 @@ async function loadScoreboard(stopId) {
 
 function closeStopPopup() {
   state.scoreboardToken += 1;
+  state.stopPopupStopId = null;
   ui.closeStopPopup();
   mapView.hideStopPopup();
+}
+
+function handleStopsOpen() {
+  if (!state.stops.size) {
+    ui.toast('Справочник остановок ещё не загружен', 'error');
+    return;
+  }
+
+  ui.showStopsModal({
+    stops: state.stops,
+    currentStopId: state.stopPopupStopId,
+  });
+}
+
+function handleStopNavigate(stopId) {
+  ui.closeStopsModal();
+  handleStopClick(Number(stopId), null, 16);
 }
 
 /* ------------------------------------------------------------------ */
@@ -961,6 +981,8 @@ ui.init({
     onScheduleRetry: handleScheduleOpen,
     onStopSelect: handleTripStopSelect,
     onStopPopupClose: closeStopPopup,
+    onStopsOpen: handleStopsOpen,
+    onStopNavigate: handleStopNavigate,
     onScoreboardRefresh: (stopId) => loadScoreboard(stopId),
     onScoreboardVehicleSelect: (vehicleId, mType, routeNuml) =>
       selectScoreboardVehicle(vehicleId, mType, routeNuml),

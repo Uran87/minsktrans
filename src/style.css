@@ -1384,6 +1384,135 @@ button:focus-visible {
 }
 
 /* ------------------------------------------------------------------ */
+/* Список всех остановок                                               */
+/* ------------------------------------------------------------------ */
+
+.modal-panel-stops {
+  width: min(660px, calc(100vw - 32px));
+}
+
+.stops-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.stops-search {
+  flex: 1;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  outline: none;
+  background: rgba(2, 6, 23, 0.6);
+  color: var(--text);
+  font-size: 12.5px;
+  transition: border-color 0.18s, box-shadow 0.18s;
+}
+
+.stops-search::placeholder {
+  color: var(--muted-2);
+}
+
+.stops-search:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.stops-summary {
+  flex: none;
+  color: var(--muted-2);
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
+.stops-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 12px;
+}
+
+.stop-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(2, 6, 23, 0.35);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.18s, border-color 0.18s;
+}
+
+.stop-row:hover {
+  border-color: var(--border-strong);
+  background: rgba(148, 163, 184, 0.08);
+}
+
+.stop-row.is-current {
+  border-color: var(--accent-glow);
+  background: var(--accent-soft);
+}
+
+.stop-row-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.stop-row-name {
+  overflow: hidden;
+  font-size: 12.5px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stop-row-alt {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 10.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stop-lang {
+  flex: none;
+  color: var(--muted-2);
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.stop-row-coords {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-end;
+  color: var(--muted-2);
+  font-size: 9.5px;
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+}
+
+.stop-row .chevron {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--muted-2);
+}
+
+/* ------------------------------------------------------------------ */
 /* Попап остановки                                                     */
 /* ------------------------------------------------------------------ */
 
@@ -1504,6 +1633,18 @@ button:focus-visible {
 .stop-popup-badge.is-muted {
   background: rgba(148, 163, 184, 0.1);
   color: var(--muted);
+}
+
+button.stop-popup-badge {
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s;
+}
+
+button.stop-popup-badge:hover {
+  background: rgba(148, 163, 184, 0.2);
+  color: var(--text);
 }
 
 .stop-popup-list {
@@ -1995,6 +2136,15 @@ button.score-main:hover .score-route strong {
 
   .trip-count {
     display: none;
+  }
+
+  .stops-toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .stops-summary {
+    width: 100%;
   }
 }
 
