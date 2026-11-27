@@ -103,6 +103,11 @@ export function init(config) {
   els.toasts = document.getElementById('toasts');
   els.loadingBar = document.getElementById('loading-bar');
 
+  // Меню маршрутов выносим из сайдбара: иначе его обрезает overflow панели.
+  if (els.routeMenu && els.routeMenu.parentElement !== document.body) {
+    document.body.appendChild(els.routeMenu);
+  }
+
   setActiveTransport(config.transport || 'bus');
   els.routeInput.value = config.route || '';
   els.mockToggle.checked = Boolean(config.mock);
@@ -272,6 +277,12 @@ function wireEvents() {
   els.hamburger.addEventListener('click', () => setSidebarOpen(true));
   els.sidebarClose.addEventListener('click', () => setSidebarOpen(false));
 
+  const repositionMenu = () => {
+    if (els.routeMenu && !els.routeMenu.hidden) positionRouteMenu();
+  };
+  window.addEventListener('resize', repositionMenu);
+  document.addEventListener('scroll', repositionMenu, true);
+
   document.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape') return;
     if (!els.stopsModal.hidden) {
@@ -339,6 +350,43 @@ function filterRoutes() {
   return routeOptions.filter((route) => String(route.numl).toLowerCase().startsWith(query));
 }
 
+/** Высота пункта и рамки меню: 10 пунктов видны, остальные — по скролу. */
+const ROUTE_MENU_ITEM_HEIGHT = 34;
+const ROUTE_MENU_CHROME_HEIGHT = 10;
+const ROUTE_MENU_VISIBLE_ITEMS = 10;
+
+/**
+ * Позиционирует меню относительно поля ввода во вьюпорте.
+ * Меню живёт в body, поэтому не обрезается панелью и её прокруткой.
+ */
+function positionRouteMenu() {
+  if (!els.routeMenu || !els.routeInput) return;
+
+  const rect = els.routeInput.getBoundingClientRect();
+  if (!rect.width) return;
+
+  const gap = 6;
+  const viewportGap = 8;
+  const fullHeight =
+    ROUTE_MENU_VISIBLE_ITEMS * ROUTE_MENU_ITEM_HEIGHT + ROUTE_MENU_CHROME_HEIGHT;
+  const spaceBelow = window.innerHeight - rect.bottom - gap - viewportGap;
+  const spaceAbove = rect.top - gap - viewportGap;
+  const openAbove = spaceBelow < fullHeight && spaceAbove > spaceBelow;
+  const height = Math.max(120, Math.min(fullHeight, openAbove ? spaceAbove : spaceBelow));
+
+  els.routeMenu.style.left = `${Math.round(rect.left)}px`;
+  els.routeMenu.style.width = `${Math.round(rect.width)}px`;
+  els.routeMenu.style.maxHeight = `${Math.round(height)}px`;
+
+  if (openAbove) {
+    els.routeMenu.style.top = 'auto';
+    els.routeMenu.style.bottom = `${Math.round(window.innerHeight - rect.top + gap)}px`;
+  } else {
+    els.routeMenu.style.bottom = 'auto';
+    els.routeMenu.style.top = `${Math.round(rect.bottom + gap)}px`;
+  }
+}
+
 function renderRouteMenu() {
   if (!els.routeMenu) return;
 
@@ -368,6 +416,7 @@ function renderRouteMenu() {
   }
 
   els.routeMenu.hidden = false;
+  positionRouteMenu();
   els.routeInput.setAttribute('aria-expanded', 'true');
   els.routeInput.setAttribute('aria-activedescendant', routeActiveIndex >= 0 ? `route-option-${routeActiveIndex}` : '');
 
