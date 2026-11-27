@@ -595,29 +595,30 @@ async function openDetails(vehicleId, transportHint = null) {
   }
 }
 
-async function handleScheduleOpen() {
-  const route = String(state.route || '').trim();
-  if (!route) {
-    ui.toast('Сначала выберите маршрут', 'error');
+async function openScheduleFor(transport, route) {
+  const type = normalizeTransportType(transport) || state.transport;
+  const routeNumber = String(route || '').trim();
+
+  if (!routeNumber) {
+    ui.toast('Расписание недоступно: не указан маршрут', 'error');
     return;
   }
 
-  const transport = state.transport;
   const token = ++state.scheduleToken;
 
-  ui.showScheduleLoading({ transport, route });
+  ui.showScheduleLoading({ transport: type, route: routeNumber });
 
   try {
     const [schedule, stopsMap] = await Promise.all([
-      api.getScheduleDay({ transport, route }),
+      api.getScheduleDay({ transport: type, route: routeNumber }),
       ensureStops().catch(() => state.stops),
     ]);
 
     if (token !== state.scheduleToken || !ui.isScheduleOpen()) return;
 
     ui.renderSchedule({
-      transport,
-      route,
+      transport: type,
+      route: routeNumber,
       trips: schedule?.trips || [],
       stops: stopsMap || state.stops,
     });
@@ -625,8 +626,26 @@ async function handleScheduleOpen() {
     if (token !== state.scheduleToken || !ui.isScheduleOpen()) return;
 
     console.warn('[schedule]', error);
-    ui.renderSchedule({ transport, route, trips: [], stops: state.stops, error });
+    ui.renderSchedule({ transport: type, route: routeNumber, trips: [], stops: state.stops, error });
   }
+}
+
+function handleScheduleOpen() {
+  const route = String(state.route || '').trim();
+  if (!route) {
+    ui.toast('Сначала выберите маршрут', 'error');
+    return;
+  }
+
+  openScheduleFor(state.transport, route);
+}
+
+function handleScoreboardSchedule(routeNuml, mType) {
+  const type = transportTypeFromMType(mType) || state.transport;
+  const route = String(routeNuml || '').trim();
+  if (!route) return;
+
+  openScheduleFor(type, route);
 }
 
 function selectVehicle(vehicleId, focus, transportHint = null) {
@@ -998,6 +1017,7 @@ ui.init({
     onScoreboardRefresh: (stopId) => loadScoreboard(stopId),
     onScoreboardVehicleSelect: (vehicleId, mType, routeNuml) =>
       selectScoreboardVehicle(vehicleId, mType, routeNuml),
+    onScoreboardSchedule: handleScoreboardSchedule,
   },
 });
 

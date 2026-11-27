@@ -242,6 +242,15 @@ function wireEvents() {
       return;
     }
 
+    const scheduleButton = event.target.closest('[data-scoreboard-schedule-route]');
+    if (scheduleButton) {
+      handlers.onScoreboardSchedule?.(
+        scheduleButton.dataset.scoreboardScheduleRoute,
+        scheduleButton.dataset.scoreboardScheduleType,
+      );
+      return;
+    }
+
     const vehicleButton = event.target.closest('[data-scoreboard-vehicle-id]');
     if (vehicleButton) {
       const vehicleId = Number(vehicleButton.dataset.scoreboardVehicleId);
@@ -1183,6 +1192,17 @@ export function renderScoreboard({ stopId, routes = [], updatedAt = new Date() }
           ${renderEtaPill(route.first, '', 'Ближайший')}
           ${renderEtaPill(route.next, 'is-next', 'Следующий')}
         </span>
+        <button type="button" class="score-schedule"
+                data-scoreboard-schedule-route="${esc(route.numl)}"
+                data-scoreboard-schedule-type="${esc(route.mType)}"
+                aria-label="Расписание маршрута ${esc(route.numl)} на день"
+                title="Расписание маршрута на день">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M12 7.4V12l3 2.1" fill="none" stroke="currentColor" stroke-width="1.8"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
       </li>`;
     })
     .join('');
