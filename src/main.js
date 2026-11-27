@@ -125,7 +125,7 @@ function loadAllStops() {
 /* Маршрут и поллинг                                                   */
 /* ------------------------------------------------------------------ */
 
-async function showRoute() {
+async function showRoute({ fit = true } = {}) {
   const transport = state.transport;
   const route = state.route;
   if (!route) {
@@ -175,7 +175,7 @@ async function showRoute() {
     );
     applyRouteGeometry(transport, route, generation, requestId, preferredDirection);
     updateVehicleLayer();
-    mapView.fitToRoute(state.routeStops, state.routeVehicles);
+    if (fit) mapView.fitToRoute(state.routeStops, state.routeVehicles);
     renderRouteVehicles();
 
     const now = new Date();
@@ -648,6 +648,27 @@ function handleVehicleClick(vehicleId) {
     normalizeTransportType(vehicle?.mtype) ||
     normalizeTransportType(vehicle?.tsType) ||
     null;
+  const route = String(vehicle?.route ?? '').trim();
+
+  if (type && route) {
+    const routeChanged = type !== state.transport || route !== state.route;
+
+    if (routeChanged) {
+      state.transport = type;
+      state.route = route;
+      ui.setActiveTransport(type);
+      ui.setRouteValue(route);
+      ui.setScheduleVisible(true);
+      savePrefs({ transport: type, route });
+      loadRouteOptions(type);
+    }
+
+    // Клик по машине на карте сразу строит линию её маршрута.
+    // Карту при этом не подгоняем под весь маршрут — оставляем текущий вид.
+    if (routeChanged || !state.routeStops.length) {
+      showRoute({ fit: false });
+    }
+  }
 
   selectVehicle(vehicleId, false, type);
 }
