@@ -108,38 +108,6 @@ button:focus-visible {
   background: var(--panel-2) !important;
 }
 
-.ol-attribution {
-  left: 50% !important;
-  right: auto !important;
-  bottom: 4px !important;
-  transform: translateX(-50%);
-  max-width: calc(100vw - 32px);
-  padding: 2px 9px !important;
-  border-radius: 10px;
-  background: rgba(6, 11, 22, 0.55) !important;
-  backdrop-filter: blur(8px);
-  font-size: 10px !important;
-}
-
-.ol-attribution ul {
-  margin: 0 !important;
-  padding: 0 !important;
-  color: var(--muted-2) !important;
-  text-shadow: none !important;
-}
-
-.ol-attribution li {
-  display: inline;
-}
-
-.ol-attribution a {
-  color: var(--muted) !important;
-}
-
-.ol-attribution button {
-  display: none !important;
-}
-
 /* ------------------------------------------------------------------ */
 /* Панель                                                              */
 /* ------------------------------------------------------------------ */
@@ -1999,13 +1967,6 @@ button.score-main:hover .score-route strong {
     right: 12px !important;
     bottom: auto !important;
     left: auto !important;
-  }
-
-  .ol-attribution {
-    bottom: 8px !important;
-    left: 12px !important;
-    max-width: 45vw;
-    transform: none;
   }
 
   .toasts {

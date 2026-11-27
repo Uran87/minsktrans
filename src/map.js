@@ -94,7 +94,7 @@ function vehicleIcon(color, selected) {
   return iconCache.get(key);
 }
 
-const VEHICLE_ROUTE_LABEL_SCALE = 1.35;
+const VEHICLE_ROUTE_LABEL_SCALE = 1.62;
 
 /**
  * Маркер ТС увеличивается на 35 %, когда на нём рисуется номер маршрута:
@@ -468,9 +468,7 @@ export function initMap(target, { onVehicleClick, onStopClick, onEmptyClick, onZ
       maxZoom: 19,
       constrainResolution: false,
     }),
-    controls: defaultControls({
-      attributionOptions: { collapsible: false },
-    }),
+    controls: defaultControls({ attribution: false }),
   });
 
   map.on('singleclick', (event) => {
