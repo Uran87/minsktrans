@@ -88,6 +88,7 @@ export function init(config) {
   els.scheduleSummary = document.getElementById('schedule-summary');
   els.scheduleBody = document.getElementById('schedule-body');
   els.scheduleClose = document.getElementById('schedule-close');
+  els.stopsOpen = document.getElementById('stops-open');
   els.stopsModal = document.getElementById('stops-modal');
   els.stopsClose = document.getElementById('stops-close');
   els.stopsSearch = document.getElementById('stops-search');
@@ -199,6 +200,7 @@ function wireEvents() {
   els.detailsClose.addEventListener('click', () => handlers.onDetailsClose?.());
 
   els.scheduleOpen?.addEventListener('click', () => handlers.onScheduleOpen?.());
+  els.stopsOpen?.addEventListener('click', () => handlers.onStopsOpen?.());
   els.scheduleClose?.addEventListener('click', closeSchedule);
   els.scheduleModal?.addEventListener('click', (event) => {
     if (event.target.closest('[data-schedule-close]')) closeSchedule();

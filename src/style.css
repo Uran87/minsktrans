@@ -1140,13 +1140,19 @@ button:focus-visible {
 /* Полное расписание на день                                           */
 /* ------------------------------------------------------------------ */
 
-.schedule-open {
+.sidebar-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sidebar-action {
   width: 100%;
   height: 42px;
   font-size: 12.5px;
 }
 
-.schedule-open svg {
+.sidebar-action svg {
   width: 16px;
   height: 16px;
 }
