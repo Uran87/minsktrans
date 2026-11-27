@@ -20,11 +20,16 @@
       <div id="map" class="map" role="application" aria-label="Карта транспорта Минска"></div>
 
       <div id="map-controls" class="map-controls" role="group" aria-label="Управление картой">
-        <span class="map-controls-title">Слой</span>
         <div id="layer-toggle" class="chips" role="group" aria-label="Базовый слой карты">
           <button type="button" class="chip" data-layer="map">Схема</button>
           <button type="button" class="chip" data-layer="satellite">Спутник</button>
-          <button type="button" class="chip" data-layer="hybrid">Гибрид</button>
+          <button
+            type="button"
+            class="chip"
+            data-layer="mmm"
+            title="Мультимасштабная карта"
+            aria-label="Мультимасштабная карта"
+          >Мультимасштабная</button>
         </div>
       </div>
 

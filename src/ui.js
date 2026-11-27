@@ -510,7 +510,6 @@ export function renderDetails({
     normalizeTransportType(vehicle.tsType) || normalizeTransportType(transport) || normalizeTransportType(fallbackTransport) || 'bus';
 
   const routeNumber = vehicle.marNuml || vehicle.marNum || '—';
-  const tripNumber = trip?.tripNum ?? vehicle.tripNum ?? vehicle.tripId ?? null;
   const lastStopId = Number(vehicle.lastStopId);
 
   els.details.hidden = false;
@@ -519,8 +518,6 @@ export function renderDetails({
   els.detailsTitle.textContent = '';
 
   const metaItems = [
-    ['Модель', vehicle.model || vehicle.tsTypeAdd || '—'],
-    ['Рейс', tripNumber !== null && tripNumber !== '' ? tripNumber : '—'],
     ['Направление', directionLabel(vehicle.direction)],
     ['Госномер', vehicle.gosnum || '—'],
   ];
