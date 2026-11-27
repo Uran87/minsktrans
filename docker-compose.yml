@@ -38,8 +38,8 @@ services:
         # База API на стороне браузера. Nginx проксирует её на backend.
         VITE_API_BASE: ${VITE_API_BASE:-/api/v1}
         # true — при первом запуске включён демо-режим (маршрут №1 без API).
-        # Переключатель «Демо-данные» в интерфейсе меняет режим на лету.
-        VITE_MOCK_DEFAULT: ${VITE_MOCK_DEFAULT:-true}
+        # По умолчанию выключен; переключатель «Демо-данные» меняет режим на лету.
+        VITE_MOCK_DEFAULT: ${VITE_MOCK_DEFAULT:-false}
     image: minsktrans-live:latest
     container_name: minsktrans-live
     ports:

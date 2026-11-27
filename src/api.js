@@ -17,11 +17,10 @@ const REQUEST_TIMEOUT = 25_000;
 const LOCAL_REQUEST_TIMEOUT = 4_000;
 const LOCAL_LIVE_TIMEOUT = 20_000;
 
+// Демо-режим по умолчанию выключен; включается через VITE_MOCK_DEFAULT=true
+// или переключателем «Демо-данные» в интерфейсе.
 const envMockDefault = import.meta.env.VITE_MOCK_DEFAULT;
-let mockEnabled =
-  envMockDefault === undefined || envMockDefault === null || envMockDefault === ''
-    ? Boolean(import.meta.env.DEV)
-    : String(envMockDefault).toLowerCase() === 'true';
+let mockEnabled = String(envMockDefault ?? 'false').toLowerCase() === 'true';
 
 export class ApiError extends Error {
   constructor(message, details = {}) {

@@ -53,25 +53,15 @@ const prefs = loadPrefs();
 /* ------------------------------------------------------------------ */
 
 function loadPrefs() {
-  const defaults = {
+  return {
     transport: 'bus',
     route: '',
+    // При загрузке всегда открываем схему, даже если в прошлый раз был другой слой.
     layer: 'map',
+    // Демо-режим берётся из сборки (по умолчанию выключен) и далее
+    // переключается вручную в панели.
     mock: api.isMockEnabled(),
   };
-
-  try {
-    const stored = JSON.parse(localStorage.getItem(PREFS_KEY) || '{}');
-    return {
-      transport: 'bus',
-      route: '',
-      // При загрузке всегда открываем схему, даже если в прошлый раз был другой слой.
-      layer: 'map',
-      mock: typeof stored.mock === 'boolean' ? stored.mock : defaults.mock,
-    };
-  } catch {
-    return defaults;
-  }
 }
 
 function savePrefs(patch) {
