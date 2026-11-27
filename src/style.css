@@ -1428,6 +1428,40 @@ button:focus-visible {
   white-space: nowrap;
 }
 
+.stops-lang {
+  display: flex;
+  flex: none;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(2, 6, 23, 0.55);
+}
+
+.stops-lang-btn {
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s;
+}
+
+.stops-lang-btn:hover {
+  background: rgba(148, 163, 184, 0.08);
+  color: var(--text);
+}
+
+.stops-lang-btn.is-active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent-glow);
+}
+
 .stops-modal-body {
   display: flex;
   flex-direction: column;
@@ -2143,8 +2177,12 @@ button.score-main:hover .score-route strong {
     gap: 8px;
   }
 
+  .stops-search {
+    flex-basis: 100%;
+  }
+
   .stops-summary {
-    width: 100%;
+    margin-left: auto;
   }
 }
 

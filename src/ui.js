@@ -91,6 +91,7 @@ export function init(config) {
   els.stopsModal = document.getElementById('stops-modal');
   els.stopsClose = document.getElementById('stops-close');
   els.stopsSearch = document.getElementById('stops-search');
+  els.stopsLang = document.getElementById('stops-lang');
   els.stopsSummary = document.getElementById('stops-summary');
   els.stopsBody = document.getElementById('stops-body');
   els.stopPopup = document.getElementById('stop-popup');
@@ -211,6 +212,10 @@ function wireEvents() {
     if (event.target.closest('[data-stops-close]')) closeStopsModal();
   });
   els.stopsSearch?.addEventListener('input', () => renderStopsList(els.stopsSearch.value));
+  els.stopsLang?.addEventListener('click', (event) => {
+    const button = event.target.closest('button[data-lang]');
+    if (button) setStopsLang(button.dataset.lang);
+  });
   els.stopsBody?.addEventListener('click', (event) => {
     const button = event.target.closest('[data-stop-id]');
     if (!button) return;
@@ -818,7 +823,9 @@ export function renderSchedule({ transport, route, trips = [], stops = new Map()
 /* Модальное окно «Все остановки»                                      */
 /* ------------------------------------------------------------------ */
 
-let stopsModalState = { list: [], currentStopId: null };
+const STOPS_LANGS = ['ru', 'by', 'en'];
+
+let stopsModalState = { list: [], currentStopId: null, lang: 'ru' };
 
 export function isStopsModalOpen() {
   return Boolean(els.stopsModal) && !els.stopsModal.hidden;
@@ -830,13 +837,38 @@ export function closeStopsModal() {
   els.stopsBody.innerHTML = '';
   els.stopsSearch.value = '';
   els.stopsSummary.textContent = '';
-  stopsModalState = { list: [], currentStopId: null };
+  stopsModalState = { list: [], currentStopId: null, lang: 'ru' };
+}
+
+function stopNameValue(stop, lang) {
+  if (lang === 'by') return String(stop.nameBy ?? '').trim();
+  if (lang === 'en') return String(stop.nameEn ?? '').trim();
+  return String(stop.nameRu ?? '').trim() || String(stop.name ?? '').trim();
+}
+
+function syncStopsLangButtons() {
+  els.stopsLang?.querySelectorAll('button[data-lang]').forEach((button) => {
+    const active = button.dataset.lang === stopsModalState.lang;
+    button.classList.toggle('is-active', active);
+    button.setAttribute('aria-pressed', String(active));
+  });
 }
 
 function stopRowMarkup(stop) {
-  const ru = stop.nameRu || stop.name || `Остановка ${stop.stopId}`;
-  const by = stop.nameBy && stop.nameBy !== ru ? stop.nameBy : '';
-  const en = stop.nameEn && stop.nameEn !== ru && stop.nameEn !== by ? stop.nameEn : '';
+  const lang = stopsModalState.lang;
+  const names = {
+    ru: stopNameValue(stop, 'ru'),
+    by: stopNameValue(stop, 'by'),
+    en: stopNameValue(stop, 'en'),
+  };
+
+  const fallback = names.ru || names.by || names.en || `Остановка ${stop.stopId}`;
+  const primary = names[lang] || fallback;
+
+  const others = STOPS_LANGS.filter((key) => key !== lang)
+    .map((key) => ({ key, value: names[key] }))
+    .filter((item) => item.value && item.value !== primary);
+
   const lat = Number.isFinite(Number(stop.lat)) ? Number(stop.lat).toFixed(6) : '—';
   const lon = Number.isFinite(Number(stop.lon)) ? Number(stop.lon).toFixed(6) : '—';
   const current =
@@ -844,11 +876,15 @@ function stopRowMarkup(stop) {
     String(stopsModalState.currentStopId) === String(stop.stopId);
 
   return `<button type="button" class="stop-row${current ? ' is-current' : ''}"
-                  data-stop-id="${esc(stop.stopId)}" title="Перейти к остановке «${esc(ru)}»">
+                  data-stop-id="${esc(stop.stopId)}" title="Перейти к остановке «${esc(primary)}»">
     <span class="stop-row-main">
-      <span class="stop-row-name">${esc(ru)}</span>
-      ${by ? `<span class="stop-row-alt"><span class="stop-lang">BY</span>${esc(by)}</span>` : ''}
-      ${en ? `<span class="stop-row-alt"><span class="stop-lang">EN</span>${esc(en)}</span>` : ''}
+      <span class="stop-row-name">${esc(primary)}</span>
+      ${others
+        .map(
+          (item) =>
+            `<span class="stop-row-alt"><span class="stop-lang">${item.key.toUpperCase()}</span>${esc(item.value)}</span>`,
+        )
+        .join('')}
     </span>
     <span class="stop-row-coords">
       <span>${esc(lat)}</span>
@@ -859,6 +895,17 @@ function stopRowMarkup(stop) {
             stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
   </button>`;
+}
+
+function setStopsLang(lang) {
+  if (!STOPS_LANGS.includes(lang) || stopsModalState.lang === lang) return;
+
+  stopsModalState.lang = lang;
+  syncStopsLangButtons();
+  renderStopsList(els.stopsSearch.value);
+
+  const current = els.stopsBody.querySelector('.stop-row.is-current');
+  current?.scrollIntoView({ block: 'center' });
 }
 
 function renderStopsList(query = '') {
@@ -897,10 +944,11 @@ export function showStopsModal({ stops = new Map(), currentStopId = null } = {})
       String(a.name || a.nameRu || '').localeCompare(String(b.name || b.nameRu || ''), 'ru'),
     );
 
-  stopsModalState = { list, currentStopId };
+  stopsModalState = { list, currentStopId, lang: 'ru' };
   els.stopsModal.hidden = false;
   els.stopsSearch.value = '';
   els.stopsBody.scrollTop = 0;
+  syncStopsLangButtons();
   renderStopsList('');
 
   els.stopsBody.querySelector('.stop-row.is-current')?.scrollIntoView({ block: 'center' });
