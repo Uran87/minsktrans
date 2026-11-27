@@ -15,7 +15,7 @@ import * as ui from './ui.js';
 import { POLL_INTERVAL, TRANSPORT_TYPES, normalizeTransportType, transportTypeFromMType } from './constants.js';
 
 const PREFS_KEY = 'minsktrans:prefs:v1';
-const VALID_LAYERS = ['map', 'satellite', 'hybrid'];
+const VALID_LAYERS = ['map', 'satellite', 'mmm'];
 
 const state = {
   transport: 'bus',
@@ -65,7 +65,8 @@ function loadPrefs() {
     return {
       transport: 'bus',
       route: '',
-      layer: VALID_LAYERS.includes(stored.layer) ? stored.layer : defaults.layer,
+      // При загрузке всегда открываем схему, даже если в прошлый раз был другой слой.
+      layer: 'map',
       mock: typeof stored.mock === 'boolean' ? stored.mock : defaults.mock,
     };
   } catch {
