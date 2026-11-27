@@ -1653,6 +1653,23 @@ button:focus-visible {
   word-break: break-word;
 }
 
+.stop-popup-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.stop-popup-title-row h3 {
+  flex: 1;
+  min-width: 0;
+}
+
+.stop-popup-title-row .stop-popup-badge {
+  flex: none;
+  margin-top: 5px;
+  white-space: nowrap;
+}
+
 .stop-popup-badge {
   display: inline-flex;
   align-items: center;

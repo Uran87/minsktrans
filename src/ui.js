@@ -977,11 +977,18 @@ export function renderStopPopup({ stop, isRouteStop = false, route, transport })
   els.stopPopup.classList.toggle('is-route', Boolean(isRouteStop));
   els.stopPopupBody.innerHTML = `
     <span class="stop-popup-kicker">${isRouteStop ? 'Остановка маршрута' : 'Остановка'}</span>
-    <h3>${esc(title)}</h3>
+    <div class="stop-popup-title-row">
+      <h3>${esc(title)}</h3>
+      ${
+        isRouteStop
+          ? ''
+          : '<button type="button" class="stop-popup-badge is-muted" data-open-stops>Все остановки</button>'
+      }
+    </div>
     ${
       isRouteStop
         ? `<span class="stop-popup-badge">${esc(typeLabel)} · маршрут №${esc(route || '—')}</span>`
-        : '<button type="button" class="stop-popup-badge is-muted" data-open-stops>Все остановки</button>'
+        : ''
     }
     <dl class="stop-popup-list">
       ${rows
